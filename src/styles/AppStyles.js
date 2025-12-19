@@ -1,313 +1,223 @@
-import { StyleSheet } from 'react-native';
+import { useState, useEffect } from 'react';
+import { Alert } from 'react-native';
+import { Audio } from 'expo-av';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Sharing from 'expo-sharing';
 
-export const styles = StyleSheet.create({
-  // Main container holding the app
-  // Uygulamayı tutan ana kapsayıcı
-  container: { 
-      flex: 1, 
-      backgroundColor: '#121212', // Dark background / Koyu arka plan
-      alignItems: 'center', 
-      justifyContent: 'space-between', 
-      paddingVertical: 50 
-  },
+export const useAudioLogic = () => {
+    // --- States / Durumlar ---
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [recording, setRecording] = useState(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [isPaused, setIsPaused] = useState(false); // New state for pause / Duraklatma için yeni durum
+    const [duration, setDuration] = useState("00:00");
+    const [metering, setMetering] = useState([]); 
+    const [permissionResponse, requestPermission] = Audio.usePermissions();
+    
+    const [sound, setSound] = useState(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [playingId, setPlayingId] = useState(null);
+    const [savedRecordings, setSavedRecordings] = useState([]);
 
-  // Header section with title and menu
-  // Başlık ve menünün olduğu üst kısım
-  header: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      justifyContent: 'space-between', 
-      width: '100%', 
-      paddingHorizontal: 20, 
-      marginTop: 20, 
-      zIndex: 10 // Ensures header stays on top / Başlığın en üstte kalmasını sağlar
-  },
-  
-  title: { 
-      fontSize: 28, 
-      fontWeight: 'bold', 
-      color: '#E0E0E0', 
-      letterSpacing: 1 
-  },
-  
-  subtitle: { 
-      color: '#777', 
-      fontSize: 12 
-  },
-  
-  menuButton: { 
-      padding: 10, 
-      zIndex: 20 // Clickable area priority / Tıklanabilir alan önceliği
-  }, 
+    useEffect(() => {
+        loadRecordings();
+        return () => { if (sound) sound.unloadAsync(); };
+    }, []);
 
-  // --- Menu Modal Styles / Menü Modal Stilleri ---
-  modalOverlay: { 
-      flex: 1, 
-      backgroundColor: 'rgba(0,0,0,0.5)', // Semi-transparent background / Yarı saydam arka plan
-      justifyContent: 'flex-start', 
-      alignItems: 'flex-end' 
-  },
-  
-  menuContainer: { 
-      width: 200, 
-      backgroundColor: '#1E1E1E', 
-      marginTop: 100, 
-      marginRight: 20, 
-      borderRadius: 15, 
-      padding: 15, 
-      borderWidth: 1, 
-      borderColor: '#333' 
-  },
-  
-  menuTitle: { 
-      color: '#555', 
-      fontWeight: 'bold', 
-      marginBottom: 15, 
-      fontSize: 16 
-  },
-  
-  menuItem: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      paddingVertical: 12, 
-      borderBottomWidth: 1, 
-      borderBottomColor: '#2A2A2A' 
-  },
-  
-  menuItemText: { 
-      color: '#E0E0E0', 
-      marginLeft: 10, 
-      fontSize: 16 
-  },
-  
-  // --- Records List Styles / Kayıt Listesi Stilleri ---
-  recordsContainer: { 
-      flex: 1, 
-      backgroundColor: '#121212', 
-      padding: 20 
-  },
-  
-  recordsHeader: { 
-      flexDirection: 'row', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
-      marginBottom: 20, 
-      marginTop: 20 
-  },
-  
-  recordsTitle: { 
-      color: 'white', 
-      fontSize: 24, 
-      fontWeight: 'bold' 
-  },
-  
-  closeText: { 
-      color: '#4A90E2', 
-      fontSize: 16 
-  },
-  
-  emptyState: { 
-      flex: 1, 
-      justifyContent: 'center', 
-      alignItems: 'center' 
-  },
-  
-  recordItem: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      backgroundColor: '#1E1E1E', 
-      padding: 10, 
-      borderRadius: 12, 
-      marginBottom: 10, 
-      borderWidth: 1, 
-      borderColor: '#333' 
-  },
-  
-  // Play button inside the list
-  // Liste içindeki oynat butonu
-  recordPlayBtn: { 
-      width: 40, 
-      height: 40, 
-      borderRadius: 20, 
-      backgroundColor: '#333', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      borderWidth: 1, 
-      borderColor: '#444' 
-  },
-  
-  recordName: { 
-      color: 'white', 
-      fontWeight: 'bold', 
-      fontSize: 16 
-  },
-  
-  recordDate: { 
-      color: '#777', 
-      fontSize: 12, 
-      marginTop: 4 
-  },
-  
-  // --- Waveform Area / Ses Dalgası Alanı ---
-  waveContainer: { 
-      flex: 1, 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      width: '90%', 
-      minHeight: 200 
-  },
-  
-  idleWaveContainer: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      height: 100 
-  },
-  
-  activeRecordingContainer: { 
-      width: '100%', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      backgroundColor: '#1E1E1E', 
-      padding: 20, 
-      borderRadius: 20, 
-      borderWidth: 1, 
-      borderColor: '#333' 
-  },
-  
-  timerText: { 
-      color: '#FF4B4B', 
-      fontSize: 24, 
-      fontWeight: 'bold', 
-      marginBottom: 15, 
-      fontVariant: ['tabular-nums'] // Prevents numbers from jumping / Sayıların zıplamasını engeller
-  },
-  
-  waveBarRecord: { 
-      width: 4, 
-      borderRadius: 2, 
-      marginHorizontal: 1, 
-      backgroundColor: '#FF4B4B' 
-  },
-  
-  // --- File Preview Card / Dosya Önizleme Kartı ---
-  filePreviewCard: { 
-      width: '100%', 
-      backgroundColor: '#1E1E1E', 
-      borderRadius: 16, 
-      borderWidth: 1, 
-      borderColor: '#333', 
-      padding: 16, 
-      position: 'relative' 
-  },
-  
-  backButton: { 
-      position: 'absolute', 
-      top: 10, 
-      left: 10, 
-      zIndex: 10, 
-      padding: 5 
-  },
-  
-  closeButton: { 
-      position: 'absolute', 
-      top: 10, 
-      right: 10, 
-      zIndex: 10, 
-      backgroundColor: '#2A2A2A', 
-      borderRadius: 15, 
-      padding: 4 
-  },
-  
-  previewContent: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      marginTop: 20 
-  },
-  
-  iconContainer: { 
-      width: 50, 
-      height: 50, 
-      backgroundColor: '#2A2A2A', 
-      borderRadius: 10, 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      marginRight: 15 
-  },
-  
-  fileInfo: { 
-      flex: 1, 
-      justifyContent: 'center' 
-  },
-  
-  fileName: { 
-      color: 'white', 
-      fontSize: 16, 
-      fontWeight: 'bold', 
-      marginBottom: 4 
-  },
-  
-  fileStatus: { 
-      color: '#777', 
-      fontSize: 12 
-  },
-  
-  miniWaveformContainer: { 
-      height: 40, 
-      marginTop: 8, 
-      width: '100%', 
-      opacity: 0.9, 
-      justifyContent: 'center' 
-  },
-  
-  shareBtn: { 
-      padding: 10 
-  },
+    // --- Logic Functions ---
 
-  // --- Controls / Kontroller ---
-  controlsContainer: { 
-      width: '100%', 
-      alignItems: 'center', 
-      marginBottom: 30 
-  },
-  
-  uploadButton: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      backgroundColor: '#1E1E1E', 
-      paddingVertical: 12, 
-      paddingHorizontal: 25, 
-      borderRadius: 20, 
-      marginBottom: 40, 
-      borderWidth: 1, 
-      borderColor: '#333' 
-  },
-  
-  actionButton: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      paddingVertical: 12, 
-      paddingHorizontal: 20, 
-      borderRadius: 20, 
-      borderWidth: 1, 
-      borderColor: '#333' 
-  },
-  
-  sendButton: { 
-      backgroundColor: '#2ecc71', 
-      borderColor: '#27ae60' 
-  },
-  
-  uploadText: { 
-      color: '#A0A0A0', 
-      marginLeft: 10, 
-      fontSize: 16, 
-      fontWeight: '600' 
-  },
-  
-  recordLabel: { 
-      color: '#555', 
-      marginTop: 15, 
-      fontSize: 12 
-  },
-});
+    const loadRecordings = async () => {
+        try {
+            const jsonValue = await AsyncStorage.getItem('@my_recordings');
+            if (jsonValue != null) setSavedRecordings(JSON.parse(jsonValue));
+        } catch (e) { console.error(e); }
+    };
+
+    const renameRecording = async (newName) => {
+        if (!selectedFile) return;
+        let cleanName = newName.trim();
+        if (!cleanName.endsWith('.m4a')) cleanName += '.m4a';
+        try {
+            const oldUri = selectedFile.uri;
+            const folder = oldUri.substring(0, oldUri.lastIndexOf('/') + 1);
+            const newUri = folder + cleanName;
+            await FileSystem.moveAsync({ from: oldUri, to: newUri });
+            setSelectedFile(prev => ({ ...prev, name: cleanName, uri: newUri }));
+            Alert.alert("Success", "File renamed.");
+        } catch (error) { Alert.alert("Error", "Could not rename."); }
+    };
+
+    const playSound = async (uri, id) => {
+        try {
+            if (sound) { await sound.stopAsync(); await sound.unloadAsync(); }
+            if (playingId === id && isPlaying) { setIsPlaying(false); setPlayingId(null); return; }
+            const { sound: newSound } = await Audio.Sound.createAsync({ uri: uri });
+            setSound(newSound);
+            setPlayingId(id);
+            setIsPlaying(true);
+            await newSound.playAsync();
+            newSound.setOnPlaybackStatusUpdate((status) => {
+                if (status.didJustFinish) { setIsPlaying(false); setPlayingId(null); }
+            });
+        } catch (error) { Alert.alert("Error", "Playback failed."); }
+    };
+
+    const stopSound = async () => {
+        if (sound) { await sound.stopAsync(); setIsPlaying(false); setPlayingId(null); }
+    };
+
+    // --- RECORDING CONTROLS / KAYIT KONTROLLERİ ---
+
+    const startRecording = async () => {
+        try {
+            if (permissionResponse.status !== 'granted') await requestPermission();
+            await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+            
+            const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+            await recording.setProgressUpdateInterval(75);
+            
+            recording.setOnRecordingStatusUpdate((status) => {
+                if (status.canRecord && status.isRecording) {
+                    const millis = status.durationMillis;
+                    const minutes = Math.floor(millis / 60000);
+                    const seconds = ((millis % 60000) / 1000).toFixed(0);
+                    setDuration(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+                    
+                    const currentLevel = status.metering || -160;
+                    setMetering((prev) => [...prev, currentLevel]);
+                }
+            });
+
+            setRecording(recording);
+            setIsRecording(true);
+            setIsPaused(false);
+            setMetering([]); 
+            setSelectedFile(null);
+        } catch (err) { Alert.alert("Error", "Failed to access microphone."); }
+    };
+
+    // Pause Recording / Kaydı Duraklat
+    const pauseRecording = async () => {
+        if (recording) {
+            await recording.pauseAsync();
+            setIsPaused(true);
+        }
+    };
+
+    // Resume Recording / Kayda Devam Et
+    const resumeRecording = async () => {
+        if (recording) {
+            await recording.startAsync();
+            setIsPaused(false);
+        }
+    };
+
+    // Stop and Save / Durdur ve Kaydet
+    const stopRecording = async () => {
+        setIsRecording(false);
+        setIsPaused(false);
+        if (!recording) return;
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        setRecording(null);
+        if (uri) {
+            setSelectedFile({ name: `Rec_${new Date().toLocaleTimeString().replace(/:/g, '-')}.m4a`, uri: uri, size: 0, mimeType: 'audio/m4a' });
+        }
+    };
+
+    // Discard Recording (Trash) / Kaydı İptal Et (Çöp)
+    const discardRecording = async () => {
+        setIsRecording(false);
+        setIsPaused(false);
+        if (!recording) return;
+        
+        try {
+            await recording.stopAndUnloadAsync();
+            // Just don't save it to selectedFile
+            // selectedFile'a kaydetme, sadece sıfırla
+        } catch (error) {
+            console.error("Discard error", error);
+        }
+        
+        setRecording(null);
+        setMetering([]);
+        setDuration("00:00");
+    };
+
+    const saveRecordingToDevice = async () => {
+        if (!selectedFile) return;
+        try {
+            const baseFolder = FileSystem.documentDirectory || FileSystem.cacheDirectory;
+            if (!baseFolder) { Alert.alert("Error", "No folder found."); return; }
+            const fileName = selectedFile.name; 
+            const newPath = baseFolder + fileName;
+            if (selectedFile.uri !== newPath) { await FileSystem.moveAsync({ from: selectedFile.uri, to: newPath }); }
+            const newRecord = {
+                id: Date.now().toString(),
+                name: fileName,
+                uri: newPath,
+                date: new Date().toLocaleDateString(),
+                duration: duration,
+                metering: metering 
+            };
+            const updatedList = [newRecord, ...savedRecordings];
+            setSavedRecordings(updatedList);
+            await AsyncStorage.setItem('@my_recordings', JSON.stringify(updatedList));
+            Alert.alert("Success", "Saved to library!");
+            setMetering([]);
+            setSelectedFile(null);
+        } catch (error) { Alert.alert("Error", "Save failed."); }
+    };
+
+    const deleteRecording = async (id) => {
+        try {
+            if (playingId === id) stopSound();
+            const recordingToDelete = savedRecordings.find(r => r.id === id);
+            if (recordingToDelete) { await FileSystem.deleteAsync(recordingToDelete.uri, { idempotent: true }); }
+            const updatedList = savedRecordings.filter(r => r.id !== id);
+            setSavedRecordings(updatedList);
+            await AsyncStorage.setItem('@my_recordings', JSON.stringify(updatedList));
+        } catch (error) { console.error("Delete error:", error); }
+    };
+
+    const pickFile = async () => {
+        try {
+            if (selectedFile) setSelectedFile(null);
+            const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*', copyToCacheDirectory: true });
+            if (result.canceled) return;
+            if (result.assets && result.assets.length > 0) {
+                setMetering([]);
+                setSelectedFile(result.assets[0]);
+            }
+        } catch (error) { console.error("Pick error:", error); }
+    };
+
+    const loadFromLibrary = (item) => {
+        stopSound();
+        setSelectedFile({ name: item.name, uri: item.uri, size: 0, mimeType: 'audio/m4a' });
+        setMetering(item.metering || []);
+    };
+
+    const clearSelection = () => { stopSound(); setSelectedFile(null); setMetering([]); };
+    
+    // Share Specific File (For "Open Location" feature)
+    // Belirli dosyayı paylaş ("Konumu Aç" özelliği için)
+    const shareFileUri = async (uri) => {
+        if (uri && await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(uri);
+        }
+    };
+
+    const shareFile = async () => {
+        if (selectedFile?.uri) await shareFileUri(selectedFile.uri);
+    };
+
+    return {
+        selectedFile, isRecording, isPaused, duration, metering, isPlaying, playingId, savedRecordings,
+        startRecording, stopRecording, pauseRecording, resumeRecording, discardRecording,
+        playSound, stopSound, saveRecordingToDevice, deleteRecording, 
+        pickFile, loadFromLibrary, clearSelection, shareFile, shareFileUri, renameRecording
+    };
+};

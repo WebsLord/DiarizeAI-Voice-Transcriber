@@ -1,53 +1,58 @@
 import { StatusBar } from 'expo-status-bar';
-import { Text, View, TouchableOpacity, SafeAreaView, Alert, ScrollView, Modal } from 'react-native';
+import { Text, View, TouchableOpacity, SafeAreaView, Alert, ScrollView, Modal, TextInput } from 'react-native';
 import { MaterialIcons, FontAwesome5, Ionicons, Entypo, Feather } from '@expo/vector-icons';
 import { useState, useRef } from 'react';
 
 // --- CUSTOM MODULES ---
-// --- ÖZEL MODÜLLER ---
-import { styles } from './src/styles/AppStyles';       // CSS File / CSS Dosyası
-import { useAudioLogic } from './src/hooks/useAudioLogic'; // Logic File / Mantık Dosyası
+import { styles } from './src/styles/AppStyles';       
+import { useAudioLogic } from './src/hooks/useAudioLogic'; 
 
 // --- COMPONENTS ---
-// --- BİLEŞENLER ---
 import { PulsingGlowButton } from './src/components/PulsingButton';
 import { AnimatedWaveBar, PlaybackWaveBar } from './src/components/WaveBars';
 import { RecordsModal } from './src/components/RecordsModal';
 
 export default function App() {
   
-  // Initialize logic hook
-  // Mantık kancasını başlat
   const {
       selectedFile, isRecording, duration, metering,
       isPlaying, playingId, savedRecordings,
       startRecording, stopRecording, playSound, stopSound,
       saveRecordingToDevice, deleteRecording, pickFile,
-      loadFromLibrary, clearSelection, shareFile
+      loadFromLibrary, clearSelection, shareFile, renameRecording
   } = useAudioLogic();
 
-  // UI States (Menu visibility, etc.)
-  // Arayüz Durumları (Menü görünürlüğü vb.)
+  // UI States
   const [isMenuVisible, setIsMenuVisible] = useState(false); 
   const [isRecordsVisible, setIsRecordsVisible] = useState(false); 
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newFileName, setNewFileName] = useState("");
+
+  // Reference for the ScrollView to enable auto-scrolling
+  // Otomatik kaydırma için ScrollView referansı
   const scrollViewRef = useRef();
 
-  // --- UI HANDLERS / ARAYÜZ İŞLEYİCİLERİ ---
-  
-  // Toggle recording state
-  // Kayıt durumunu değiştir
+  // --- UI HANDLERS ---
   const handleRecordPress = () => { isRecording ? stopRecording() : startRecording(); };
   
-  // Confirmation dialog before deleting/clearing
-  // Silme/temizleme öncesi onay diyaloğu
   const handleBackPress = () => {
       Alert.alert("Delete Recording", "Recording will be deleted. Are you sure?",
           [{ text: "Cancel", style: "cancel" }, { text: "Yes, Delete", style: "destructive", onPress: clearSelection }]
       );
   };
 
-  // Helper to normalize decibels for visualization
-  // Görselleştirme için desibelleri normalize eden yardımcı
+  const handleSaveRename = () => {
+      if (newFileName.length > 0) {
+          renameRecording(newFileName);
+      }
+      setIsEditingName(false);
+  };
+
+  const startRenaming = () => {
+      setNewFileName(selectedFile.name.replace('.m4a', '')); 
+      setIsEditingName(true);
+  };
+
   const normalizeWave = (db) => {
       const minDb = -80; const maxHeight = 40; 
       if (db < minDb) return 3; 
@@ -59,7 +64,7 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* 1. HEADER / BAŞLIK */}
+      {/* 1. HEADER */}
       <View style={styles.header}>
         <View style={{width: 40}} /> 
         <View style={{alignItems: 'center'}}>
@@ -71,19 +76,15 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {/* 2. MENU MODAL / MENÜ MODALI */}
+      {/* 2. MENUS */}
       <Modal visible={isMenuVisible} transparent={true} animationType="fade" onRequestClose={() => setIsMenuVisible(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsMenuVisible(false)}>
               <View style={styles.menuContainer}>
                   <Text style={styles.menuTitle}>Menu</Text>
-                  
-                  {/* Records Option / Kayıtlar Seçeneği */}
                   <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuVisible(false); setTimeout(() => setIsRecordsVisible(true), 300); }}>
                       <MaterialIcons name="library-music" size={24} color="#4A90E2" />
                       <Text style={styles.menuItemText}>Records</Text>
                   </TouchableOpacity>
-                  
-                  {/* Settings Option (Disabled) / Ayarlar Seçeneği (Devre Dışı) */}
                   <TouchableOpacity style={[styles.menuItem, {opacity: 0.5}]} disabled={true}>
                       <Ionicons name="settings-outline" size={24} color="#777" />
                       <Text style={styles.menuItemText}>Settings (Soon)</Text>
@@ -92,7 +93,6 @@ export default function App() {
           </TouchableOpacity>
       </Modal>
 
-      {/* 3. RECORDS LIST MODAL / KAYIT LİSTESİ MODALI */}
       <RecordsModal 
         visible={isRecordsVisible}
         onClose={() => { stopSound(); setIsRecordsVisible(false); }}
@@ -104,36 +104,74 @@ export default function App() {
         isPlaying={isPlaying}
       />
 
-      {/* 4. VISUALIZER AREA / GÖRSELLEŞTİRİCİ ALANI */}
+      {/* 3. VISUALIZER AREA */}
       <View style={styles.waveContainer}>
-        {/* CASE A: RECORDING / DURUM A: KAYIT */}
+        {/* CASE A: RECORDING (Timeline Accumulation - WhatsApp Style) */}
+        {/* DURUM A: KAYIT (Zaman Çizelgesi Birikimi - WhatsApp Tarzı) */}
         {isRecording ? (
              <View style={styles.activeRecordingContainer}>
                  <Text style={styles.timerText}>{duration}</Text>
                  <View style={{ height: 60, width: '100%' }}>
-                     <ScrollView ref={scrollViewRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center', paddingRight: 20 }} onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
-                        {metering.map((db, index) => (<View key={index} style={[styles.waveBarRecord, { height: normalizeWave(db) }]} />))}
+                     {/* ScrollView Settings:
+                        - horizontal: True (Scrolls left/right)
+                        - contentContainerStyle: Ensures bars start from right if needed, but 'flex-start' is better for accumulation.
+                        - onContentSizeChange: KEY PART! When new bars are added, auto-scroll to the END.
+                     */}
+                     <ScrollView 
+                        ref={scrollViewRef} 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false} 
+                        // Auto-scroll to end whenever new data comes in
+                        // Yeni veri geldiğinde otomatik olarak sona kaydır
+                        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+                        contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 10 }}
+                     >
+                        {metering.map((db, index) => (
+                            <View 
+                                key={index} 
+                                style={[
+                                    styles.waveBarRecord, 
+                                    { height: normalizeWave(db) }
+                                ]} 
+                            />
+                        ))}
                      </ScrollView>
                  </View>
              </View>
         ) 
-        /* CASE B: PREVIEW / DURUM B: ÖNİZLEME */
+        /* CASE B: PREVIEW */
         : selectedFile ? (
             <View style={styles.filePreviewCard}>
                 <TouchableOpacity onPress={handleBackPress} style={styles.backButton}><Ionicons name="arrow-back" size={24} color="#A0A0A0" /></TouchableOpacity>
                 <TouchableOpacity onPress={handleBackPress} style={styles.closeButton}><Ionicons name="close" size={20} color="#FF4B4B" /></TouchableOpacity>
                 
                 <View style={styles.previewContent}>
-                    {/* Play Button in Preview / Önizlemede Oynat Butonu */}
                     <TouchableOpacity style={styles.iconContainer} onPress={() => playSound(selectedFile.uri, 'preview')}>
                          <FontAwesome5 name={(playingId === 'preview' && isPlaying) ? "pause" : "play"} size={24} color="#FF4B4B" />
                     </TouchableOpacity>
 
                     <View style={styles.fileInfo}>
-                        <Text style={styles.fileName} numberOfLines={1}>{selectedFile.name}</Text>
+                        <View style={styles.fileNameContainer}>
+                            {isEditingName ? (
+                                <TextInput 
+                                    style={styles.renameInput}
+                                    value={newFileName}
+                                    onChangeText={setNewFileName}
+                                    autoFocus={true}
+                                    onBlur={handleSaveRename} 
+                                    onSubmitEditing={handleSaveRename} 
+                                    returnKeyType="done"
+                                />
+                            ) : (
+                                <TouchableOpacity onPress={startRenaming} style={{flexDirection:'row', alignItems:'center'}}>
+                                    <Text style={styles.fileName} numberOfLines={1}>{selectedFile.name}</Text>
+                                    <Feather name="edit-2" size={14} color="#777" style={styles.editIcon} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
                         <Text style={styles.fileStatus}>{(playingId === 'preview' && isPlaying) ? "Playing..." : "Ready to Process"}</Text>
                         
-                        {/* Mini Visualizer / Mini Görselleştirici */}
                         {metering.length > 0 && (
                             <View style={styles.miniWaveformContainer}>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }}>
@@ -152,7 +190,7 @@ export default function App() {
                 </View>
             </View>
         ) 
-        /* CASE C: IDLE / DURUM C: BOŞTA */
+        /* CASE C: IDLE */
         : (
             <View style={styles.idleWaveContainer}>
                 {[...Array(5)].map((_, index) => (<AnimatedWaveBar key={index} />))}
@@ -160,7 +198,7 @@ export default function App() {
         )}
       </View>
 
-      {/* 5. CONTROLS / KONTROLLER */}
+      {/* 4. CONTROLS */}
       <View style={styles.controlsContainer}>
         {!selectedFile && !isRecording && (
             <TouchableOpacity style={styles.uploadButton} onPress={pickFile}>
