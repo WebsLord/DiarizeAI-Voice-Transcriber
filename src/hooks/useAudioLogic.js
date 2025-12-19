@@ -93,18 +93,35 @@ export const useAudioLogic = () => {
         } catch (e) { console.error(e); }
     };
 
+    // --- GÜVENLİK GÜNCELLEMESİ YAPILDI ---
     const renameRecording = async (newName) => {
         if (!selectedFile) return;
-        let cleanName = newName.trim();
+
+        // 1. Güvenlik: İsimdeki tehlikeli karakterleri temizle (Sadece harf, rakam, boşluk, tire, alt çizgi)
+        let cleanName = newName.replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
+
+        // 2. Kontrol: Eğer isim tamamen silindiyse veya boşsa uyarı ver
+        if (cleanName.length === 0) {
+            Alert.alert("Invalid Name", "Please use letters and numbers only.");
+            return;
+        }
+
         if (!cleanName.endsWith('.m4a')) cleanName += '.m4a';
+        
         try {
             const oldUri = selectedFile.uri;
             const folder = oldUri.substring(0, oldUri.lastIndexOf('/') + 1);
             const newUri = folder + cleanName;
+            
+            // Dosya ismini değiştir
             await FileSystem.moveAsync({ from: oldUri, to: newUri });
+            
+            // State'i güncelle
             setSelectedFile(prev => ({ ...prev, name: cleanName, uri: newUri }));
-            Alert.alert("Success", "File renamed.");
-        } catch (error) { Alert.alert("Error", "Could not rename."); }
+            Alert.alert("Success", "File renamed securely.");
+        } catch (error) { 
+            Alert.alert("Error", "Could not rename. Name might be invalid."); 
+        }
     };
 
     const playSound = async (uri, id) => {
@@ -131,9 +148,13 @@ export const useAudioLogic = () => {
         try {
             const baseFolder = FileSystem.documentDirectory || FileSystem.cacheDirectory;
             if (!baseFolder) { Alert.alert("Error", "No folder found."); return; }
+            
+            // Kaydederken de mevcut ismi kullanıyoruz, zaten rename fonksiyonunda temizlemiştik.
             const fileName = selectedFile.name; 
             const newPath = baseFolder + fileName;
+            
             if (selectedFile.uri !== newPath) { await FileSystem.moveAsync({ from: selectedFile.uri, to: newPath }); }
+            
             const newRecord = {
                 id: Date.now().toString(),
                 name: fileName,
@@ -188,7 +209,6 @@ export const useAudioLogic = () => {
         }
     };
 
-    // --- BU FONKSİYON EKSİKTİ, BU YÜZDEN HATA ALIYORDUN ---
     const shareFileUri = async (uri) => {
         if (uri && await Sharing.isAvailableAsync()) {
             await Sharing.shareAsync(uri);
@@ -200,7 +220,7 @@ export const useAudioLogic = () => {
         startRecording, stopRecording, pauseRecording, resumeRecording, discardRecording,
         playSound, stopSound, saveRecordingToDevice, deleteRecording, 
         pickFile, loadFromLibrary, clearSelection, shareFile, 
-        shareFileUri, // <-- Bunu mutlaka buraya eklemelisin
+        shareFileUri, 
         renameRecording
     };
 };
