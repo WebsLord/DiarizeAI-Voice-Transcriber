@@ -40,10 +40,9 @@ export default function App() {
         
         // Security Check: File Size Limit (e.g., 50MB)
         // Güvenlik Kontrolü: Dosya Boyutu Limiti (örn. 50MB)
-        // This prevents users from crashing the app with huge files
         const fileSizeInMB = file.size / (1024 * 1024);
         if (fileSizeInMB > 50) {
-            Alert.alert("Error / Hata", "File is too large. Max 50MB allowed. / Dosya çok büyük. Maksimum 50MB izin veriliyor.");
+            Alert.alert("Error", "File is too large. Max 50MB allowed."); // English Alert
             return;
         }
 
@@ -53,7 +52,7 @@ export default function App() {
 
     } catch (error) {
       console.error("Error picking file: / Dosya seçerken hata:", error);
-      Alert.alert("Error", "Could not pick the file. / Dosya seçilemedi.");
+      Alert.alert("Error", "Could not pick the file."); // English Alert
     }
   };
 
@@ -64,8 +63,9 @@ export default function App() {
   };
 
   // Placeholder for recording feature
+  // Kayıt özelliği için yer tutucu
   const handleRecordPress = () => {
-    Alert.alert("Coming Soon / Yakında", "Recording feature is next! / Kayıt özelliği sırada!");
+    Alert.alert("Coming Soon", "Recording feature is next!"); // English Alert
   };
 
   return (
@@ -80,12 +80,11 @@ export default function App() {
         <Text style={styles.title}>Diarize AI</Text>
         <Text style={styles.subtitle}>
           Live audio now converts to text
-          {'\n'}
-          Canlı ses şimdi metne dönüşüyor
         </Text>
       </View>
 
       {/* Visualization Area */}
+      {/* Görselleştirme Alanı */}
       <View style={styles.waveContainer}>
         {/* Dynamic View: Show file info if selected, else show equalizer icon */}
         {/* Dinamik Görünüm: Dosya seçildiyse bilgileri, yoksa ekolayzer ikonunu göster */}
@@ -96,7 +95,7 @@ export default function App() {
                 <Text style={styles.fileSize}>{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</Text>
                 
                 <TouchableOpacity onPress={clearSelection} style={styles.removeButton}>
-                    <Text style={styles.removeText}>Cancel / İptal</Text>
+                    <Text style={styles.removeText}>Cancel</Text>
                 </TouchableOpacity>
             </View>
         ) : (
@@ -112,14 +111,14 @@ export default function App() {
         {!selectedFile ? (
             <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPress}>
             <FontAwesome5 name="cloud-upload-alt" size={24} color="#A0A0A0" />
-            <Text style={styles.uploadText}>Select Audio File / Ses Dosyası Seç</Text>
+            <Text style={styles.uploadText}>Select Audio File</Text>
             </TouchableOpacity>
         ) : (
             // If file is selected, this button becomes "Process"
             // Dosya seçiliyse bu buton "İşle" butonuna dönüşür
-            <TouchableOpacity style={[styles.uploadButton, styles.sendButton]} onPress={() => Alert.alert("Ready", "Ready to send to API / API'ye gönderilmeye hazır")}>
+            <TouchableOpacity style={[styles.uploadButton, styles.sendButton]} onPress={() => Alert.alert("Ready", "Ready to send to API")}>
             <FontAwesome5 name="paper-plane" size={24} color="white" />
-            <Text style={[styles.uploadText, {color: 'white'}]}>Process File / Dosyayı İşle</Text>
+            <Text style={[styles.uploadText, {color: 'white'}]}>Process File</Text>
             </TouchableOpacity>
         )}
 
@@ -133,7 +132,7 @@ export default function App() {
           </LinearGradient>
         </TouchableOpacity>
 
-        <Text style={styles.recordLabel}>Tap to Record / Kayıt için Dokun</Text>
+        <Text style={styles.recordLabel}>Tap to Record</Text>
       </View>
 
     </SafeAreaView>
