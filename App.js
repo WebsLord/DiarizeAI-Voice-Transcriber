@@ -1,250 +1,453 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
-import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Alert, Animated, Easing, ScrollView, Modal, FlatList } from 'react-native';
+import { MaterialIcons, FontAwesome5, Ionicons, Entypo, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
-import * as DocumentPicker from 'expo-document-picker'; // Secure file picker / Güvenli dosya seçici
+import { useState, useEffect, useRef } from 'react';
+import * as DocumentPicker from 'expo-document-picker'; 
+import { Audio } from 'expo-av'; 
+import * as Sharing from 'expo-sharing';
+// SDK 54 UYUMLU LEGACY IMPORTLAR
+import * as FileSystem from 'expo-file-system/legacy'; 
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
 
-// Main Application Component
-// Ana Uygulama Bileşeni
+// --- COMPONENT: PULSING GLOW BUTTON (MAVİ/YEŞİL NEFES ALMA) ---
+const PulsingGlowButton = ({ onPress, isRecording }) => {
+    const animValue = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        // Animasyon SÜREKLİ çalışsın (Hem boştayken hem kayıttayken)
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(animValue, { 
+                    toValue: 1, 
+                    duration: 1500, // 1.5 saniye (Nefes alma hızı)
+                    easing: Easing.inOut(Easing.ease), 
+                    useNativeDriver: true 
+                }),
+                Animated.timing(animValue, { 
+                    toValue: 0, 
+                    duration: 1500, 
+                    easing: Easing.inOut(Easing.ease), 
+                    useNativeDriver: true 
+                })
+            ])
+        ).start();
+    }, []);
+
+    const scale = animValue.interpolate({ inputRange: [0, 1], outputRange: [1, 1.4] }); // Halka büyüme oranı
+    const opacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.2, 0.6, 0] }); // Parlaklık döngüsü
+
+    // DURUMA GÖRE RENK SEÇİMİ
+    // Kayıt yoksa: #4A90E2 (Mavi)
+    // Kayıt varsa: #2ecc71 (Yeşil - İstediğin renk)
+    const glowColor = isRecording ? '#2ecc71' : '#4A90E2';
+
+    return (
+        <View style={{ alignItems: 'center', justifyContent: 'center', width: 100, height: 100 }}>
+            {/* Sürekli çalışan halka */}
+            <Animated.View 
+                style={[
+                    styles.pulseRing, 
+                    { 
+                        transform: [{ scale }], 
+                        opacity: opacity,
+                        backgroundColor: glowColor // Rengi duruma göre değiştir
+                    }
+                ]} 
+            />
+            
+            <TouchableOpacity style={styles.recordButton} onPress={onPress} activeOpacity={0.8}>
+                <LinearGradient 
+                    colors={isRecording ? ['#FF0000', '#800000'] : ['#FF4B4B', '#FF0000']} 
+                    style={styles.recordGradient}
+                >
+                    {isRecording ? <FontAwesome5 name="stop" size={24} color="white" /> : <MaterialIcons name="mic" size={40} color="white" />}
+                </LinearGradient>
+            </TouchableOpacity>
+        </View>
+    );
+};
+
+// --- ANIMATED WAVE BAR (Idle Mode) ---
+const AnimatedWaveBar = ({ index }) => {
+    const heightAnim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        const randomDuration = 400 + Math.random() * 800; 
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(heightAnim, { toValue: 1, duration: randomDuration, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+                Animated.timing(heightAnim, { toValue: 0, duration: randomDuration, easing: Easing.inOut(Easing.ease), useNativeDriver: false })
+            ])
+        ).start();
+    }, []);
+    const height = heightAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 50] });
+    const backgroundColor = heightAnim.interpolate({ inputRange: [0, 1], outputRange: ['#555555', '#4A90E2'] });
+    return <Animated.View style={[styles.waveBar, { height, backgroundColor }]} />;
+};
+
+// --- MAIN APP ---
 export default function App() {
   
-  // State to hold selected file information
-  // Seçilen dosya bilgilerini tutacak durum değişkeni
   const [selectedFile, setSelectedFile] = useState(null);
+  const [recording, setRecording] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [duration, setDuration] = useState("00:00");
+  const [metering, setMetering] = useState([]); 
+  const [permissionResponse, requestPermission] = Audio.usePermissions();
+  const scrollViewRef = useRef();
 
-  // FEATURE 1: Function to pick an audio file from the device
-  // ÖZELLİK 1: Cihazdan ses dosyası seçme fonksiyonu
+  // MENÜ VE KAYITLAR STATE'LERİ
+  const [isMenuVisible, setIsMenuVisible] = useState(false); 
+  const [isRecordsVisible, setIsRecordsVisible] = useState(false); 
+  const [savedRecordings, setSavedRecordings] = useState([]); 
+
+  useEffect(() => {
+      loadRecordings();
+  }, []);
+
+  // --- STORAGE & FILE SYSTEM LOGIC ---
+  
+  const loadRecordings = async () => {
+      try {
+          const jsonValue = await AsyncStorage.getItem('@my_recordings');
+          if (jsonValue != null) {
+              setSavedRecordings(JSON.parse(jsonValue));
+          }
+      } catch (e) {
+          console.error("Failed to load recordings", e);
+      }
+  };
+
+  const saveRecordingToDevice = async () => {
+      if (!selectedFile) return;
+
+      try {
+          // GÜVENLİK KONTROLÜ
+          const baseFolder = FileSystem.documentDirectory || FileSystem.cacheDirectory;
+          if (!baseFolder) { Alert.alert("Hata", "Klasör bulunamadı."); return; }
+
+          const fileName = selectedFile.name || `Rec_${Date.now()}.m4a`;
+          const newPath = baseFolder + fileName;
+
+          await FileSystem.moveAsync({ from: selectedFile.uri, to: newPath });
+
+          const newRecord = {
+              id: Date.now().toString(),
+              name: fileName,
+              uri: newPath,
+              date: new Date().toLocaleDateString(),
+              duration: duration 
+          };
+
+          const updatedList = [newRecord, ...savedRecordings];
+          setSavedRecordings(updatedList);
+          await AsyncStorage.setItem('@my_recordings', JSON.stringify(updatedList));
+
+          Alert.alert("Başarılı", "Kayıt başarıyla kütüphaneye eklendi!");
+          setSelectedFile(null); 
+          setMetering([]);
+      } catch (error) {
+          console.error("Save error details:", error);
+          Alert.alert("Hata", "Kayıt saklanamadı.");
+      }
+  };
+
+  const deleteRecording = async (id) => {
+      try {
+          const recordingToDelete = savedRecordings.find(r => r.id === id);
+          if (recordingToDelete) {
+              await FileSystem.deleteAsync(recordingToDelete.uri, { idempotent: true });
+          }
+          const updatedList = savedRecordings.filter(r => r.id !== id);
+          setSavedRecordings(updatedList);
+          await AsyncStorage.setItem('@my_recordings', JSON.stringify(updatedList));
+      } catch (error) {
+          console.error("Delete error:", error);
+      }
+  };
+
+  const loadFromLibrary = (item) => {
+      setSelectedFile({
+          name: item.name,
+          uri: item.uri,
+          size: 0, 
+          mimeType: 'audio/m4a'
+      });
+      setIsRecordsVisible(false);
+      setIsMenuVisible(false);
+      setMetering([]); 
+  };
+
+  // --- FEATURE 1: File Picker ---
   const handleUploadPress = async () => {
     try {
-      console.log("Opening document picker... / Dosya seçici açılıyor...");
-      
-      // We restrict selection to audio files only for security and UX
-      // Güvenlik ve kullanıcı deneyimi için sadece ses dosyalarına izin veriyoruz
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'audio/*', 
-        copyToCacheDirectory: true, // Cache for performance / Performans için önbelleğe al
-      });
-
-      // Check if the user canceled the action
-      // Kullanıcının işlemi iptal edip etmediğini kontrol et
-      if (result.canceled) {
-        console.log("User canceled file selection / Kullanıcı dosya seçimini iptal etti");
-        return;
-      }
-
-      // If a file is selected successfully
-      // Eğer dosya başarıyla seçildiyse
+      if (selectedFile) setSelectedFile(null);
+      const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*', copyToCacheDirectory: true });
+      if (result.canceled) return;
       if (result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-        
-        // Security Check: File Size Limit (e.g., 50MB)
-        // Güvenlik Kontrolü: Dosya Boyutu Limiti (örn. 50MB)
-        const fileSizeInMB = file.size / (1024 * 1024);
-        if (fileSizeInMB > 50) {
-            Alert.alert("Error", "File is too large. Max 50MB allowed."); // English Alert
-            return;
-        }
-
+        if (file.size / (1024 * 1024) > 50) { Alert.alert("Hata", "Dosya çok büyük. Maksimum 50MB."); return; }
+        setMetering([]); 
         setSelectedFile(file);
-        console.log("File selected:", file.name);
       }
+    } catch (error) { console.error("Error picking file:", error); }
+  };
 
-    } catch (error) {
-      console.error("Error picking file: / Dosya seçerken hata:", error);
-      Alert.alert("Error", "Could not pick the file."); // English Alert
+  // --- FEATURE 2: RECORDING ---
+  async function startRecording() {
+    try {
+      if (permissionResponse.status !== 'granted') await requestPermission();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await recording.setProgressUpdateInterval(100); 
+      recording.setOnRecordingStatusUpdate(updateRecorderStatus);
+      setRecording(recording);
+      setIsRecording(true);
+      setIsPaused(false);
+      setMetering([]); 
+      setSelectedFile(null); 
+    } catch (err) { Alert.alert("Hata", "Mikrofona erişilemedi."); }
+  }
+
+  const updateRecorderStatus = (status) => {
+      if (status.canRecord && status.isRecording) {
+          const millis = status.durationMillis;
+          const minutes = Math.floor(millis / 60000);
+          const seconds = ((millis % 60000) / 1000).toFixed(0);
+          setDuration(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+          const currentLevel = status.metering || -160;
+          setMetering((prev) => [...prev, currentLevel]);
+      }
+  };
+
+  async function stopRecording() {
+    setIsRecording(false);
+    setIsPaused(false);
+    if (!recording) return;
+    await recording.stopAndUnloadAsync();
+    const uri = recording.getURI(); 
+    setRecording(null);
+    if (uri) {
+        setSelectedFile({
+            name: `Rec_${new Date().toLocaleTimeString().replace(/:/g, '-')}.m4a`, 
+            uri: uri, size: 1024 * 1024, mimeType: 'audio/m4a'
+        });
     }
+  }
+
+  const handleRecordPress = () => { if (isRecording) stopRecording(); else startRecording(); };
+
+  const handleShare = async () => { if (selectedFile?.uri && await Sharing.isAvailableAsync()) { await Sharing.shareAsync(selectedFile.uri); } };
+
+  const handleBackPress = () => {
+      Alert.alert("Kaydı Sil", "Ses kaydı silinecektir. Onaylıyor musunuz?",
+          [{ text: "Vazgeç", style: "cancel" }, { text: "Evet, Sil", style: "destructive", onPress: () => { setSelectedFile(null); setMetering([]); } }]
+      );
   };
 
-  // Function to remove selected file
-  // Seçilen dosyayı kaldırma fonksiyonu
-  const clearSelection = () => {
-    setSelectedFile(null);
-  };
-
-  // Placeholder for recording feature
-  // Kayıt özelliği için yer tutucu
-  const handleRecordPress = () => {
-    Alert.alert("Coming Soon", "Recording feature is next!"); // English Alert
+  const normalizeWave = (db) => {
+      const minDb = -80; const maxHeight = 50; 
+      if (db < minDb) return 4; 
+      let height = ((db - minDb) / (0 - minDb)) * maxHeight;
+      return Math.max(4, height);
   };
 
   return (
-    // SafeAreaView ensures content is not hidden behind the notch on iOS/Android
-    // SafeAreaView, içeriğin çentiklerin arkasında kalmamasını sağlar
     <SafeAreaView style={styles.container}>
-      
       <StatusBar style="light" />
-
-      {/* Header Section */}
+      
+      {/* HEADER: Z-INDEX AYARLANDI (Menünün çalışması için kritik) */}
       <View style={styles.header}>
-        <Text style={styles.title}>Diarize AI</Text>
-        <Text style={styles.subtitle}>
-          Live audio now converts to text
-        </Text>
+        <View style={{width: 40}} /> 
+        <View style={{alignItems: 'center'}}>
+            <Text style={styles.title}>Diarize AI</Text>
+            <Text style={styles.subtitle}>Live audio now converts to text</Text>
+        </View>
+        <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuVisible(true)}>
+            <Feather name="menu" size={28} color="#E0E0E0" />
+        </TouchableOpacity>
       </View>
 
-      {/* Visualization Area */}
-      {/* Görselleştirme Alanı */}
+      {/* --- MENU MODAL --- */}
+      <Modal visible={isMenuVisible} transparent={true} animationType="fade" onRequestClose={() => setIsMenuVisible(false)}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsMenuVisible(false)}>
+              <View style={styles.menuContainer}>
+                  <Text style={styles.menuTitle}>Menu</Text>
+                  
+                  {/* KUTUCUK 1: RECORDS */}
+                  <TouchableOpacity style={styles.menuItem} onPress={() => {
+                      setIsMenuVisible(false); // Önce menüyü kapat
+                      setTimeout(() => setIsRecordsVisible(true), 300); // Sonra listeyi aç (Çakışmayı önler)
+                  }}>
+                      <MaterialIcons name="library-music" size={24} color="#4A90E2" />
+                      <Text style={styles.menuItemText}>Records</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={[styles.menuItem, {opacity: 0.5}]} disabled={true}>
+                      <Ionicons name="settings-outline" size={24} color="#777" />
+                      <Text style={styles.menuItemText}>Settings (Soon)</Text>
+                  </TouchableOpacity>
+              </View>
+          </TouchableOpacity>
+      </Modal>
+
+      {/* --- RECORDS LIST MODAL --- */}
+      <Modal visible={isRecordsVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setIsRecordsVisible(false)}>
+          <View style={styles.recordsContainer}>
+              <View style={styles.recordsHeader}>
+                  <Text style={styles.recordsTitle}>Saved Recordings</Text>
+                  <TouchableOpacity onPress={() => setIsRecordsVisible(false)}>
+                      <Text style={styles.closeText}>Close</Text>
+                  </TouchableOpacity>
+              </View>
+              
+              {savedRecordings.length === 0 ? (
+                  <View style={styles.emptyState}>
+                      <FontAwesome5 name="ghost" size={50} color="#333" />
+                      <Text style={{color: '#555', marginTop: 10}}>No recordings found.</Text>
+                  </View>
+              ) : (
+                  <FlatList
+                      data={savedRecordings}
+                      keyExtractor={item => item.id}
+                      renderItem={({item}) => (
+                          <TouchableOpacity style={styles.recordItem} onPress={() => loadFromLibrary(item)}>
+                              <View style={styles.recordIcon}>
+                                  <FontAwesome5 name="file-audio" size={24} color="#FF4B4B" />
+                              </View>
+                              <View style={{flex: 1}}>
+                                  <Text style={styles.recordName} numberOfLines={1}>{item.name}</Text>
+                                  <Text style={styles.recordDate}>{item.date} • {item.duration || 'Unknown'}</Text>
+                              </View>
+                              <TouchableOpacity onPress={() => deleteRecording(item.id)} style={{padding: 10}}>
+                                  <Ionicons name="trash-outline" size={20} color="#555" />
+                              </TouchableOpacity>
+                          </TouchableOpacity>
+                      )}
+                  />
+              )}
+          </View>
+      </Modal>
+
       <View style={styles.waveContainer}>
-        {/* Dynamic View: Show file info if selected, else show equalizer icon */}
-        {/* Dinamik Görünüm: Dosya seçildiyse bilgileri, yoksa ekolayzer ikonunu göster */}
-        {selectedFile ? (
-            <View style={styles.filePreview}>
-                <Ionicons name="musical-note" size={80} color="#FF4B4B" />
-                <Text style={styles.fileName}>{selectedFile.name}</Text>
-                <Text style={styles.fileSize}>{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</Text>
-                
-                <TouchableOpacity onPress={clearSelection} style={styles.removeButton}>
-                    <Text style={styles.removeText}>Cancel</Text>
-                </TouchableOpacity>
+        {isRecording || isPaused ? (
+             <View style={styles.activeRecordingContainer}>
+                 <Text style={styles.timerText}>{duration}</Text>
+                 <View style={{ height: 60, width: '100%' }}>
+                     <ScrollView ref={scrollViewRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center', paddingRight: 20 }} onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
+                        {metering.map((db, index) => (<View key={index} style={[styles.waveBarRecord, { height: normalizeWave(db) }]} />))}
+                     </ScrollView>
+                 </View>
+             </View>
+        ) : selectedFile ? (
+            <View style={styles.filePreviewCard}>
+                <TouchableOpacity onPress={handleBackPress} style={styles.backButton}><Ionicons name="arrow-back" size={24} color="#A0A0A0" /></TouchableOpacity>
+                <TouchableOpacity onPress={handleBackPress} style={styles.closeButton}><Ionicons name="close" size={20} color="#FF4B4B" /></TouchableOpacity>
+                <View style={styles.previewContent}>
+                    <View style={styles.iconContainer}><FontAwesome5 name="music" size={32} color="#FF4B4B" /></View>
+                    <View style={styles.fileInfo}>
+                        <Text style={styles.fileName} numberOfLines={1}>{selectedFile.name}</Text>
+                        <Text style={styles.fileStatus}>Ready to Process</Text>
+                        {metering.length > 0 && (
+                            <View style={styles.miniWaveformContainer}>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                    {metering.map((db, index) => (<View key={index} style={[styles.miniWaveBar, { height: normalizeWave(db) * 0.6 }]} />))}
+                                </ScrollView>
+                            </View>
+                        )}
+                    </View>
+                    <TouchableOpacity onPress={handleShare} style={styles.shareBtn}><Entypo name="share" size={22} color="#A0A0A0" /></TouchableOpacity>
+                </View>
             </View>
         ) : (
-            <MaterialIcons name="graphic-eq" size={120} color="#555" />
+            <View style={styles.idleWaveContainer}>
+                {[...Array(5)].map((_, index) => (<AnimatedWaveBar key={index} index={index} />))}
+            </View>
         )}
       </View>
 
-      {/* Action Buttons Container */}
       <View style={styles.controlsContainer}>
-        
-        {/* BUTTON 1: Upload/Select Button */}
-        {/* Conditional Rendering: Change functionality based on state */}
-        {!selectedFile ? (
+        {!selectedFile && !isRecording && (
             <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPress}>
-            <FontAwesome5 name="cloud-upload-alt" size={24} color="#A0A0A0" />
-            <Text style={styles.uploadText}>Select Audio File</Text>
-            </TouchableOpacity>
-        ) : (
-            // If file is selected, this button becomes "Process"
-            // Dosya seçiliyse bu buton "İşle" butonuna dönüşür
-            <TouchableOpacity style={[styles.uploadButton, styles.sendButton]} onPress={() => Alert.alert("Ready", "Ready to send to API")}>
-            <FontAwesome5 name="paper-plane" size={24} color="white" />
-            <Text style={[styles.uploadText, {color: 'white'}]}>Process File</Text>
+                <FontAwesome5 name="cloud-upload-alt" size={24} color="#A0A0A0" />
+                <Text style={styles.uploadText}>Select Audio File</Text>
             </TouchableOpacity>
         )}
+        
+        {/* PROCESS & SAVE BUTTONS */}
+        {selectedFile && !isRecording && (
+            <View style={{flexDirection: 'row', gap: 10}}>
+                <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#333'}]} onPress={saveRecordingToDevice}>
+                    <FontAwesome5 name="save" size={20} color="#A0A0A0" />
+                    <Text style={[styles.uploadText, {marginLeft: 8}]}>Save</Text>
+                </TouchableOpacity>
 
-        {/* BUTTON 2: Recording Button (Visual only for now) */}
-        <TouchableOpacity style={styles.recordButton} onPress={handleRecordPress}>
-          <LinearGradient
-            colors={['#FF4B4B', '#FF0000']}
-            style={styles.recordGradient}
-          >
-            <MaterialIcons name="mic" size={40} color="white" />
-          </LinearGradient>
-        </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionButton, styles.sendButton]} onPress={() => Alert.alert("Ready", "Sending to API...")}>
+                    <FontAwesome5 name="paper-plane" size={20} color="white" />
+                    <Text style={[styles.uploadText, {color: 'white', marginLeft: 8}]}>Process</Text>
+                </TouchableOpacity>
+            </View>
+        )}
 
-        <Text style={styles.recordLabel}>Tap to Record</Text>
+        {!selectedFile && (
+            <>
+                <PulsingGlowButton onPress={handleRecordPress} isRecording={isRecording} />
+                <Text style={styles.recordLabel}>{isRecording ? "Tap to Stop" : "Tap to Record"}</Text>
+            </>
+        )}
       </View>
-
     </SafeAreaView>
   );
 }
 
-// Styling definitions / Stil tanımlamaları
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212', // Dark Theme Background
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 50,
-  },
-  header: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#E0E0E0', 
-    letterSpacing: 1,
-  },
-  subtitle: {
-    color: '#777',
-    textAlign: 'center',
-    marginTop: 10,
-    fontSize: 14,
-  },
-  waveContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    opacity: 0.9,
-    width: '80%',
-  },
-  filePreview: {
-    alignItems: 'center',
-    backgroundColor: '#1E1E1E',
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#333',
-    width: '100%',
-  },
-  fileName: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  fileSize: {
-    color: '#777',
-    fontSize: 12,
-    marginTop: 5,
-  },
-  removeButton: {
-    marginTop: 15,
-    padding: 5,
-  },
-  removeText: {
-    color: '#FF4B4B',
-    fontSize: 14,
-  },
-  controlsContainer: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1E1E1E',
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 20,
-    marginBottom: 40,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  sendButton: {
-    backgroundColor: '#2ecc71', // Green
-    borderColor: '#27ae60',
-  },
-  uploadText: {
-    color: '#A0A0A0',
-    marginLeft: 10,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  recordButton: {
-    shadowColor: '#FF0000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  recordGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 4,
-    borderColor: '#2A2A2A',
-  },
-  recordLabel: {
-    color: '#555',
-    marginTop: 15,
-    fontSize: 12,
-  },
+  container: { flex: 1, backgroundColor: '#121212', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 50 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingHorizontal: 20, marginTop: 20, zIndex: 10 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#E0E0E0', letterSpacing: 1 },
+  subtitle: { color: '#777', fontSize: 12 },
+  
+  // MENÜ BUTONU DÜZELTME
+  menuButton: { padding: 10, zIndex: 20 }, // Tıklama alanı büyütüldü ve öne çıkarıldı
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-start', alignItems: 'flex-end' },
+  menuContainer: { width: 200, backgroundColor: '#1E1E1E', marginTop: 100, marginRight: 20, borderRadius: 15, padding: 15, borderWidth: 1, borderColor: '#333' },
+  menuTitle: { color: '#555', fontWeight: 'bold', marginBottom: 15, fontSize: 16 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#2A2A2A' },
+  menuItemText: { color: '#E0E0E0', marginLeft: 10, fontSize: 16 },
+  recordsContainer: { flex: 1, backgroundColor: '#121212', padding: 20 },
+  recordsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, marginTop: 20 },
+  recordsTitle: { color: 'white', fontSize: 24, fontWeight: 'bold' },
+  closeText: { color: '#4A90E2', fontSize: 16 },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  recordItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E1E1E', padding: 15, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#333' },
+  recordIcon: { width: 40, alignItems: 'center' },
+  recordName: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+  recordDate: { color: '#777', fontSize: 12, marginTop: 4 },
+  waveContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '90%', minHeight: 200 },
+  idleWaveContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 100 },
+  waveBar: { width: 8, borderRadius: 4, marginHorizontal: 4 }, 
+  activeRecordingContainer: { width: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1E1E1E', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: '#333' },
+  timerText: { color: '#FF4B4B', fontSize: 24, fontWeight: 'bold', marginBottom: 15, fontVariant: ['tabular-nums'] },
+  waveBarRecord: { width: 4, borderRadius: 2, marginHorizontal: 1, backgroundColor: '#FF4B4B' },
+  filePreviewCard: { width: '100%', backgroundColor: '#1E1E1E', borderRadius: 16, borderWidth: 1, borderColor: '#333', padding: 16, position: 'relative' },
+  backButton: { position: 'absolute', top: 10, left: 10, zIndex: 10, padding: 5 },
+  closeButton: { position: 'absolute', top: 10, right: 10, zIndex: 10, backgroundColor: '#2A2A2A', borderRadius: 15, padding: 4 },
+  previewContent: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
+  iconContainer: { width: 50, height: 50, backgroundColor: '#2A2A2A', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  fileInfo: { flex: 1, justifyContent: 'center' },
+  fileName: { color: 'white', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  fileStatus: { color: '#777', fontSize: 12 },
+  miniWaveformContainer: { height: 30, marginTop: 8, width: '100%', opacity: 0.7 },
+  miniWaveBar: { width: 3, backgroundColor: '#FF4B4B', marginHorizontal: 1, borderRadius: 1 },
+  shareBtn: { padding: 10 },
+  controlsContainer: { width: '100%', alignItems: 'center', marginBottom: 30 },
+  uploadButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E1E1E', paddingVertical: 12, paddingHorizontal: 25, borderRadius: 20, marginBottom: 40, borderWidth: 1, borderColor: '#333' },
+  actionButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1, borderColor: '#333' },
+  sendButton: { backgroundColor: '#2ecc71', borderColor: '#27ae60' },
+  uploadText: { color: '#A0A0A0', marginLeft: 10, fontSize: 16, fontWeight: '600' },
+  recordButton: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', zIndex: 2 },
+  recordGradient: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', borderWidth: 4, borderColor: '#2A2A2A' },
+  pulseRing: { position: 'absolute', width: 80, height: 80, borderRadius: 40, backgroundColor: '#4A90E2', zIndex: 1 },
+  recordLabel: { color: '#555', marginTop: 15, fontSize: 12 },
 });
