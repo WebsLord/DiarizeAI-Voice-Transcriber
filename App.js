@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { Text, View, TouchableOpacity, SafeAreaView, Alert, ScrollView, Modal, TextInput } from 'react-native';
+import { Text, View, TouchableOpacity, SafeAreaView, Alert, ScrollView, Modal, TextInput, Animated, Easing } from 'react-native';
 import { MaterialIcons, FontAwesome5, Ionicons, Entypo, Feather } from '@expo/vector-icons';
 import { useState, useRef } from 'react';
 
@@ -9,17 +9,17 @@ import { useAudioLogic } from './src/hooks/useAudioLogic';
 
 // --- COMPONENTS ---
 import { PulsingGlowButton } from './src/components/PulsingButton';
-import { AnimatedWaveBar, PlaybackWaveBar } from './src/components/WaveBars';
+import { PlaybackWaveBar, AnimatedWaveBar } from './src/components/WaveBars'; // AnimatedWaveBar eklendi
 import { RecordsModal } from './src/components/RecordsModal';
 
 export default function App() {
   
   const {
-      selectedFile, isRecording, duration, metering,
+      selectedFile, isRecording, isPaused, duration, metering,
       isPlaying, playingId, savedRecordings,
-      startRecording, stopRecording, playSound, stopSound,
-      saveRecordingToDevice, deleteRecording, pickFile,
-      loadFromLibrary, clearSelection, shareFile, renameRecording
+      startRecording, stopRecording, pauseRecording, resumeRecording, discardRecording,
+      playSound, stopSound, saveRecordingToDevice, deleteRecording, 
+      pickFile, loadFromLibrary, clearSelection, shareFile, shareFileUri, renameRecording
   } = useAudioLogic();
 
   // UI States
@@ -28,13 +28,40 @@ export default function App() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [newFileName, setNewFileName] = useState("");
 
-  // Reference for the ScrollView to enable auto-scrolling
-  // Otomatik kaydırma için ScrollView referansı
   const scrollViewRef = useRef();
+  
+  // TRASH ANIMATION VALUES
+  // ÇÖP ANİMASYONU DEĞERLERİ
+  const trashScale = useRef(new Animated.Value(1)).current;
+  const trashTranslateY = useRef(new Animated.Value(0)).current;
+  const trashOpacity = useRef(new Animated.Value(1)).current;
 
   // --- UI HANDLERS ---
-  const handleRecordPress = () => { isRecording ? stopRecording() : startRecording(); };
   
+  const handleRecordPress = () => { startRecording(); }; // Only start here / Sadece başlat
+  
+  const handleTrashPress = () => {
+      // 1. Start Animation (Shrink & Fall)
+      // 1. Animasyonu Başlat (Küçül & Düş)
+      Animated.parallel([
+          Animated.timing(trashScale, { toValue: 0, duration: 400, useNativeDriver: true }),
+          Animated.timing(trashTranslateY, { toValue: 200, duration: 400, useNativeDriver: true }),
+          Animated.timing(trashOpacity, { toValue: 0, duration: 400, useNativeDriver: true })
+      ]).start(() => {
+          // 2. Logic after animation
+          // 2. Animasyon sonrası mantık
+          discardRecording();
+          
+          // 3. Reset Animation (Quickly)
+          // 3. Animasyonu Sıfırla (Hızlıca)
+          setTimeout(() => {
+              trashScale.setValue(1);
+              trashTranslateY.setValue(0);
+              trashOpacity.setValue(1);
+          }, 500);
+      });
+  };
+
   const handleBackPress = () => {
       Alert.alert("Delete Recording", "Recording will be deleted. Are you sure?",
           [{ text: "Cancel", style: "cancel" }, { text: "Yes, Delete", style: "destructive", onPress: clearSelection }]
@@ -42,9 +69,7 @@ export default function App() {
   };
 
   const handleSaveRename = () => {
-      if (newFileName.length > 0) {
-          renameRecording(newFileName);
-      }
+      if (newFileName.length > 0) renameRecording(newFileName);
       setIsEditingName(false);
   };
 
@@ -100,44 +125,40 @@ export default function App() {
         onLoad={loadFromLibrary}
         onDelete={deleteRecording}
         onPlay={playSound}
+        onShare={shareFileUri} // Pass share function / Paylaşma fonksiyonunu geçir
         playingId={playingId}
         isPlaying={isPlaying}
       />
 
       {/* 3. VISUALIZER AREA */}
       <View style={styles.waveContainer}>
-        {/* CASE A: RECORDING (Timeline Accumulation - WhatsApp Style) */}
-        {/* DURUM A: KAYIT (Zaman Çizelgesi Birikimi - WhatsApp Tarzı) */}
-        {isRecording ? (
-             <View style={styles.activeRecordingContainer}>
+        {/* CASE A: RECORDING */}
+        {isRecording || isPaused ? (
+             <Animated.View 
+                style={[
+                    styles.activeRecordingContainer,
+                    // Apply Animation Styles / Animasyon Stillerini Uygula
+                    {
+                        transform: [{ scale: trashScale }, { translateY: trashTranslateY }],
+                        opacity: trashOpacity
+                    }
+                ]}
+             >
                  <Text style={styles.timerText}>{duration}</Text>
                  <View style={{ height: 60, width: '100%' }}>
-                     {/* ScrollView Settings:
-                        - horizontal: True (Scrolls left/right)
-                        - contentContainerStyle: Ensures bars start from right if needed, but 'flex-start' is better for accumulation.
-                        - onContentSizeChange: KEY PART! When new bars are added, auto-scroll to the END.
-                     */}
                      <ScrollView 
                         ref={scrollViewRef} 
                         horizontal 
                         showsHorizontalScrollIndicator={false} 
-                        // Auto-scroll to end whenever new data comes in
-                        // Yeni veri geldiğinde otomatik olarak sona kaydır
                         onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
                         contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 10 }}
                      >
                         {metering.map((db, index) => (
-                            <View 
-                                key={index} 
-                                style={[
-                                    styles.waveBarRecord, 
-                                    { height: normalizeWave(db) }
-                                ]} 
-                            />
+                            <View key={index} style={[styles.waveBarRecord, { height: normalizeWave(db), backgroundColor: isPaused ? '#555' : '#FF4B4B' }]} />
                         ))}
                      </ScrollView>
                  </View>
-             </View>
+             </Animated.View>
         ) 
         /* CASE B: PREVIEW */
         : selectedFile ? (
@@ -154,13 +175,8 @@ export default function App() {
                         <View style={styles.fileNameContainer}>
                             {isEditingName ? (
                                 <TextInput 
-                                    style={styles.renameInput}
-                                    value={newFileName}
-                                    onChangeText={setNewFileName}
-                                    autoFocus={true}
-                                    onBlur={handleSaveRename} 
-                                    onSubmitEditing={handleSaveRename} 
-                                    returnKeyType="done"
+                                    style={styles.renameInput} value={newFileName} onChangeText={setNewFileName}
+                                    autoFocus={true} onBlur={handleSaveRename} onSubmitEditing={handleSaveRename} returnKeyType="done"
                                 />
                             ) : (
                                 <TouchableOpacity onPress={startRenaming} style={{flexDirection:'row', alignItems:'center'}}>
@@ -169,18 +185,13 @@ export default function App() {
                                 </TouchableOpacity>
                             )}
                         </View>
-
                         <Text style={styles.fileStatus}>{(playingId === 'preview' && isPlaying) ? "Playing..." : "Ready to Process"}</Text>
                         
                         {metering.length > 0 && (
                             <View style={styles.miniWaveformContainer}>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }}>
                                     {metering.map((db, index) => (
-                                        <PlaybackWaveBar 
-                                            key={index} 
-                                            height={normalizeWave(db) * 0.8}
-                                            isPlaying={playingId === 'preview' && isPlaying}
-                                        />
+                                        <PlaybackWaveBar key={index} height={normalizeWave(db) * 0.8} isPlaying={playingId === 'preview' && isPlaying} />
                                     ))}
                                 </ScrollView>
                             </View>
@@ -200,12 +211,12 @@ export default function App() {
 
       {/* 4. CONTROLS */}
       <View style={styles.controlsContainer}>
-        {!selectedFile && !isRecording && (
+        {!selectedFile && !isRecording && !isPaused ? (
             <TouchableOpacity style={styles.uploadButton} onPress={pickFile}>
                 <FontAwesome5 name="cloud-upload-alt" size={24} color="#A0A0A0" />
                 <Text style={styles.uploadText}>Select Audio File</Text>
             </TouchableOpacity>
-        )}
+        ) : null}
         
         {selectedFile && !isRecording && (
             <View style={{flexDirection: 'row', gap: 10}}>
@@ -213,7 +224,6 @@ export default function App() {
                     <FontAwesome5 name="save" size={20} color="#A0A0A0" />
                     <Text style={[styles.uploadText, {marginLeft: 8}]}>Save</Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity style={[styles.actionButton, styles.sendButton]} onPress={() => Alert.alert("Ready", "Sending to API...")}>
                     <FontAwesome5 name="paper-plane" size={20} color="white" />
                     <Text style={[styles.uploadText, {color: 'white', marginLeft: 8}]}>Process</Text>
@@ -221,12 +231,32 @@ export default function App() {
             </View>
         )}
 
-        {!selectedFile && (
+        {/* RECORDING STATE CONTROLS */}
+        {(isRecording || isPaused) ? (
+            <View style={styles.recordingControls}>
+                {/* TRASH BUTTON (Left) */}
+                <TouchableOpacity style={styles.smallControlBtn} onPress={handleTrashPress}>
+                    <Ionicons name="trash-outline" size={24} color="#FF4B4B" />
+                </TouchableOpacity>
+
+                {/* PAUSE/RESUME BUTTON (Center/Right) */}
+                <TouchableOpacity style={[styles.smallControlBtn, {width: 60, height: 60, borderRadius: 30, backgroundColor: '#4A90E2', borderColor: '#4A90E2'}]} 
+                    onPress={isPaused ? resumeRecording : pauseRecording}>
+                    <FontAwesome5 name={isPaused ? "play" : "pause"} size={24} color="white" />
+                </TouchableOpacity>
+
+                {/* STOP BUTTON (Main) */}
+                <TouchableOpacity onPress={stopRecording}>
+                    <PulsingGlowButton onPress={stopRecording} isRecording={true} />
+                </TouchableOpacity>
+            </View>
+        ) : !selectedFile ? (
+            // IDLE RECORD BUTTON
             <>
-                <PulsingGlowButton onPress={handleRecordPress} isRecording={isRecording} />
-                <Text style={styles.recordLabel}>{isRecording ? "Tap to Stop" : "Tap to Record"}</Text>
+                <PulsingGlowButton onPress={handleRecordPress} isRecording={false} />
+                <Text style={styles.recordLabel}>Tap to Record</Text>
             </>
-        )}
+        ) : null}
       </View>
     </SafeAreaView>
   );
