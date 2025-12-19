@@ -5,6 +5,12 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sharing from 'expo-sharing';
+// Şifreleme kütüphanesini ekledik
+import CryptoJS from 'crypto-js';
+
+// GÜVENLİK ANAHTARI: Bunu ileride .env dosyasına taşıyabiliriz.
+// Şimdilik buradaki karmaşık metin senin kasanın anahtarı.
+const SECRET_KEY = "DiarizeAI-Secure-Key-v1-ChangeThisInProduction";
 
 export const useAudioLogic = () => {
     const [selectedFile, setSelectedFile] = useState(null);
@@ -24,6 +30,20 @@ export const useAudioLogic = () => {
         loadRecordings();
         return () => { if (sound) sound.unloadAsync(); };
     }, []);
+
+    // --- YARDIMCI FONKSİYONLAR (ŞİFRELEME) ---
+
+    // Veriyi şifreleyip kaydet
+    const saveSecurely = async (data) => {
+        try {
+            const jsonString = JSON.stringify(data);
+            // AES ile şifrele
+            const encrypted = CryptoJS.AES.encrypt(jsonString, SECRET_KEY).toString();
+            await AsyncStorage.setItem('@my_recordings', encrypted);
+        } catch (e) {
+            console.error("Encryption save error:", e);
+        }
+    };
 
     // --- Kayıt Fonksiyonları ---
 
@@ -88,19 +108,31 @@ export const useAudioLogic = () => {
 
     const loadRecordings = async () => {
         try {
-            const jsonValue = await AsyncStorage.getItem('@my_recordings');
-            if (jsonValue != null) setSavedRecordings(JSON.parse(jsonValue));
-        } catch (e) { console.error(e); }
+            const storedValue = await AsyncStorage.getItem('@my_recordings');
+            if (storedValue != null) {
+                try {
+                    // 1. Önce şifreli veriyi çözmeyi dene
+                    const bytes = CryptoJS.AES.decrypt(storedValue, SECRET_KEY);
+                    const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                    setSavedRecordings(decryptedData);
+                } catch (cryptoError) {
+                    // 2. Eğer şifre çözülemezse (eski veri), normal JSON olarak okumayı dene
+                    // Bu sayede eski verilerin kaybolmaz, ilk kayıtta otomatik şifrelenir.
+                    console.log("Migrating unencrypted data...");
+                    const plainData = JSON.parse(storedValue);
+                    setSavedRecordings(plainData);
+                    // Hemen şifreli olarak geri kaydet (Migration)
+                    saveSecurely(plainData);
+                }
+            }
+        } catch (e) { console.error("Load error:", e); }
     };
 
-    // --- GÜVENLİK GÜNCELLEMESİ YAPILDI ---
     const renameRecording = async (newName) => {
         if (!selectedFile) return;
 
-        // 1. Güvenlik: İsimdeki tehlikeli karakterleri temizle (Sadece harf, rakam, boşluk, tire, alt çizgi)
+        // Input Validation (Burası önceki adımdan gelen güvenlik önlemi)
         let cleanName = newName.replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
-
-        // 2. Kontrol: Eğer isim tamamen silindiyse veya boşsa uyarı ver
         if (cleanName.length === 0) {
             Alert.alert("Invalid Name", "Please use letters and numbers only.");
             return;
@@ -113,15 +145,64 @@ export const useAudioLogic = () => {
             const folder = oldUri.substring(0, oldUri.lastIndexOf('/') + 1);
             const newUri = folder + cleanName;
             
-            // Dosya ismini değiştir
             await FileSystem.moveAsync({ from: oldUri, to: newUri });
-            
-            // State'i güncelle
             setSelectedFile(prev => ({ ...prev, name: cleanName, uri: newUri }));
+            
+            // Listeyi güncelle (Eski fonksiyonu değiştirdik, artık saveSecurely kullanıyor)
+            const updatedList = savedRecordings.map(r => 
+                r.uri === oldUri ? { ...r, name: cleanName, uri: newUri } : r
+            );
+            setSavedRecordings(updatedList);
+            await saveSecurely(updatedList); // ŞİFRELİ KAYIT
+
             Alert.alert("Success", "File renamed securely.");
-        } catch (error) { 
-            Alert.alert("Error", "Could not rename. Name might be invalid."); 
-        }
+        } catch (error) { Alert.alert("Error", "Could not rename."); }
+    };
+
+    const saveRecordingToDevice = async () => {
+        if (!selectedFile) return;
+        try {
+            const baseFolder = FileSystem.documentDirectory || FileSystem.cacheDirectory;
+            if (!baseFolder) { Alert.alert("Error", "No folder found."); return; }
+            const fileName = selectedFile.name; 
+            const newPath = baseFolder + fileName;
+            
+            if (selectedFile.uri !== newPath) { await FileSystem.moveAsync({ from: selectedFile.uri, to: newPath }); }
+            
+            const newRecord = {
+                id: Date.now().toString(),
+                name: fileName,
+                uri: newPath,
+                date: new Date().toLocaleDateString(),
+                duration: duration,
+                metering: metering 
+            };
+            
+            const updatedList = [newRecord, ...savedRecordings];
+            setSavedRecordings(updatedList);
+            
+            // BURAYI GÜNCELLEDİK: Şifreli kayıt
+            await saveSecurely(updatedList);
+            
+            Alert.alert("Success", "Saved (Encrypted) to library!");
+            setMetering([]);
+            setSelectedFile(null);
+        } catch (error) { Alert.alert("Error", "Save failed."); }
+    };
+
+    const deleteRecording = async (id) => {
+        try {
+            if (playingId === id) stopSound();
+            const recordingToDelete = savedRecordings.find(r => r.id === id);
+            if (recordingToDelete) { await FileSystem.deleteAsync(recordingToDelete.uri, { idempotent: true }); }
+            
+            const updatedList = savedRecordings.filter(r => r.id !== id);
+            setSavedRecordings(updatedList);
+            
+            // BURAYI GÜNCELLEDİK: Şifreli kayıt
+            await saveSecurely(updatedList);
+
+        } catch (error) { console.error("Delete error:", error); }
     };
 
     const playSound = async (uri, id) => {
@@ -141,46 +222,6 @@ export const useAudioLogic = () => {
 
     const stopSound = async () => {
         if (sound) { await sound.stopAsync(); setIsPlaying(false); setPlayingId(null); }
-    };
-
-    const saveRecordingToDevice = async () => {
-        if (!selectedFile) return;
-        try {
-            const baseFolder = FileSystem.documentDirectory || FileSystem.cacheDirectory;
-            if (!baseFolder) { Alert.alert("Error", "No folder found."); return; }
-            
-            // Kaydederken de mevcut ismi kullanıyoruz, zaten rename fonksiyonunda temizlemiştik.
-            const fileName = selectedFile.name; 
-            const newPath = baseFolder + fileName;
-            
-            if (selectedFile.uri !== newPath) { await FileSystem.moveAsync({ from: selectedFile.uri, to: newPath }); }
-            
-            const newRecord = {
-                id: Date.now().toString(),
-                name: fileName,
-                uri: newPath,
-                date: new Date().toLocaleDateString(),
-                duration: duration,
-                metering: metering 
-            };
-            const updatedList = [newRecord, ...savedRecordings];
-            setSavedRecordings(updatedList);
-            await AsyncStorage.setItem('@my_recordings', JSON.stringify(updatedList));
-            Alert.alert("Success", "Saved to library!");
-            setMetering([]);
-            setSelectedFile(null);
-        } catch (error) { Alert.alert("Error", "Save failed."); }
-    };
-
-    const deleteRecording = async (id) => {
-        try {
-            if (playingId === id) stopSound();
-            const recordingToDelete = savedRecordings.find(r => r.id === id);
-            if (recordingToDelete) { await FileSystem.deleteAsync(recordingToDelete.uri, { idempotent: true }); }
-            const updatedList = savedRecordings.filter(r => r.id !== id);
-            setSavedRecordings(updatedList);
-            await AsyncStorage.setItem('@my_recordings', JSON.stringify(updatedList));
-        } catch (error) { console.error("Delete error:", error); }
     };
 
     const pickFile = async () => {
