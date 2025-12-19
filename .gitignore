@@ -39,3 +39,27 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+node_modules/
+.expo/
+dist/
+web-build/
+
+# macOS dosyaları
+.DS_Store
+
+# Android/iOS build dosyaları (Gereksiz yer kaplar)
+android/
+ios/
+
+# GÜVENLİK İÇİN ÖNEMLİ (API Keyler buraya yazılacak)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.pem
+
+# Loglar
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
