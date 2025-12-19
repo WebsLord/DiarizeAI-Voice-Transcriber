@@ -63,3 +63,16 @@ ios/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+node_modules/
+.expo/
+dist/
+web-build/
+.DS_Store
+android/
+ios/
+
+# GÜVENLİK (Bunlar asla gitmeyecek)
+.env
+.env.local
+*.pem
