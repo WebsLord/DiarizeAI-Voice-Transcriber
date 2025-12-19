@@ -1,15 +1,15 @@
+import React, { useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Text, View, TouchableOpacity, SafeAreaView, Alert, ScrollView, Modal, TextInput, Animated, Easing } from 'react-native';
 import { MaterialIcons, FontAwesome5, Ionicons, Entypo, Feather } from '@expo/vector-icons';
-import { useState, useRef } from 'react';
 
-// --- CUSTOM MODULES ---
-import { styles } from './src/styles/AppStyles';       
+// --- CUSTOM MODULES (DOĞRU DOSYA YOLLARI) ---
+import styles from './src/styles/AppStyles';       
 import { useAudioLogic } from './src/hooks/useAudioLogic'; 
 
 // --- COMPONENTS ---
 import { PulsingGlowButton } from './src/components/PulsingButton';
-import { PlaybackWaveBar, AnimatedWaveBar } from './src/components/WaveBars'; // AnimatedWaveBar eklendi
+import { PlaybackWaveBar, AnimatedWaveBar } from './src/components/WaveBars'; 
 import { RecordsModal } from './src/components/RecordsModal';
 
 export default function App() {
@@ -30,30 +30,26 @@ export default function App() {
 
   const scrollViewRef = useRef();
   
-  // TRASH ANIMATION VALUES
-  // ÇÖP ANİMASYONU DEĞERLERİ
+  // TRASH ANIMATION VALUES (ÇÖP ANİMASYONU)
   const trashScale = useRef(new Animated.Value(1)).current;
   const trashTranslateY = useRef(new Animated.Value(0)).current;
   const trashOpacity = useRef(new Animated.Value(1)).current;
 
   // --- UI HANDLERS ---
   
-  const handleRecordPress = () => { startRecording(); }; // Only start here / Sadece başlat
+  const handleRecordPress = () => { startRecording(); }; 
   
   const handleTrashPress = () => {
-      // 1. Start Animation (Shrink & Fall)
-      // 1. Animasyonu Başlat (Küçül & Düş)
+      // 1. Animasyonu Başlat
       Animated.parallel([
           Animated.timing(trashScale, { toValue: 0, duration: 400, useNativeDriver: true }),
           Animated.timing(trashTranslateY, { toValue: 200, duration: 400, useNativeDriver: true }),
           Animated.timing(trashOpacity, { toValue: 0, duration: 400, useNativeDriver: true })
       ]).start(() => {
-          // 2. Logic after animation
-          // 2. Animasyon sonrası mantık
+          // 2. Kaydı Sil
           discardRecording();
           
-          // 3. Reset Animation (Quickly)
-          // 3. Animasyonu Sıfırla (Hızlıca)
+          // 3. Animasyonu Sıfırla
           setTimeout(() => {
               trashScale.setValue(1);
               trashTranslateY.setValue(0);
@@ -79,10 +75,10 @@ export default function App() {
   };
 
   const normalizeWave = (db) => {
-      const minDb = -80; const maxHeight = 40; 
-      if (db < minDb) return 3; 
+      const minDb = -80; const maxHeight = 35; // Yüksekliği scale için ayarladık
+      if (db < minDb) return 5; 
       let height = ((db - minDb) / (0 - minDb)) * maxHeight;
-      return Math.max(3, height);
+      return Math.max(5, height);
   };
 
   return (
@@ -118,26 +114,30 @@ export default function App() {
           </TouchableOpacity>
       </Modal>
 
+      {/* 3. RECORDS MODAL (LİSTE) */}
       <RecordsModal 
         visible={isRecordsVisible}
         onClose={() => { stopSound(); setIsRecordsVisible(false); }}
         recordings={savedRecordings}
-        onLoad={loadFromLibrary}
+        // DÜZELTME BURADA: Dosya seçilince listeyi kapatıyoruz ki ekran görünsün
+        onLoad={(item) => {
+            loadFromLibrary(item);
+            setIsRecordsVisible(false);
+        }}
         onDelete={deleteRecording}
         onPlay={playSound}
-        onShare={shareFileUri} // Pass share function / Paylaşma fonksiyonunu geçir
+        onShare={shareFileUri} 
         playingId={playingId}
         isPlaying={isPlaying}
       />
 
-      {/* 3. VISUALIZER AREA */}
+      {/* 4. VISUALIZER AREA (GÖRSEL ALAN) */}
       <View style={styles.waveContainer}>
-        {/* CASE A: RECORDING */}
+        {/* CASE A: RECORDING (KAYIT) */}
         {isRecording || isPaused ? (
              <Animated.View 
                 style={[
                     styles.activeRecordingContainer,
-                    // Apply Animation Styles / Animasyon Stillerini Uygula
                     {
                         transform: [{ scale: trashScale }, { translateY: trashTranslateY }],
                         opacity: trashOpacity
@@ -154,13 +154,13 @@ export default function App() {
                         contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 10 }}
                      >
                         {metering.map((db, index) => (
-                            <View key={index} style={[styles.waveBarRecord, { height: normalizeWave(db), backgroundColor: isPaused ? '#555' : '#FF4B4B' }]} />
+                            <PlaybackWaveBar key={index} height={normalizeWave(db)} isPlaying={!isPaused} />
                         ))}
                      </ScrollView>
                  </View>
              </Animated.View>
         ) 
-        /* CASE B: PREVIEW */
+        /* CASE B: PREVIEW (ÖNİZLEME) */
         : selectedFile ? (
             <View style={styles.filePreviewCard}>
                 <TouchableOpacity onPress={handleBackPress} style={styles.backButton}><Ionicons name="arrow-back" size={24} color="#A0A0A0" /></TouchableOpacity>
@@ -201,7 +201,7 @@ export default function App() {
                 </View>
             </View>
         ) 
-        /* CASE C: IDLE */
+        /* CASE C: IDLE (BOŞTA) */
         : (
             <View style={styles.idleWaveContainer}>
                 {[...Array(5)].map((_, index) => (<AnimatedWaveBar key={index} />))}
@@ -209,7 +209,7 @@ export default function App() {
         )}
       </View>
 
-      {/* 4. CONTROLS */}
+      {/* 5. CONTROLS (BUTONLAR) */}
       <View style={styles.controlsContainer}>
         {!selectedFile && !isRecording && !isPaused ? (
             <TouchableOpacity style={styles.uploadButton} onPress={pickFile}>
@@ -234,18 +234,18 @@ export default function App() {
         {/* RECORDING STATE CONTROLS */}
         {(isRecording || isPaused) ? (
             <View style={styles.recordingControls}>
-                {/* TRASH BUTTON (Left) */}
+                {/* TRASH (ÇÖP) */}
                 <TouchableOpacity style={styles.smallControlBtn} onPress={handleTrashPress}>
                     <Ionicons name="trash-outline" size={24} color="#FF4B4B" />
                 </TouchableOpacity>
 
-                {/* PAUSE/RESUME BUTTON (Center/Right) */}
+                {/* PAUSE/RESUME */}
                 <TouchableOpacity style={[styles.smallControlBtn, {width: 60, height: 60, borderRadius: 30, backgroundColor: '#4A90E2', borderColor: '#4A90E2'}]} 
                     onPress={isPaused ? resumeRecording : pauseRecording}>
                     <FontAwesome5 name={isPaused ? "play" : "pause"} size={24} color="white" />
                 </TouchableOpacity>
 
-                {/* STOP BUTTON (Main) */}
+                {/* STOP (DURDUR) */}
                 <TouchableOpacity onPress={stopRecording}>
                     <PulsingGlowButton onPress={stopRecording} isRecording={true} />
                 </TouchableOpacity>

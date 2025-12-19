@@ -3,203 +3,292 @@ import { StyleSheet, Dimensions } from 'react-native';
 const { width } = Dimensions.get('window');
 
 export default StyleSheet.create({
-  // --- Genel Kapsayıcı ---
+  // --- Genel ---
   container: {
     flex: 1,
-    backgroundColor: '#121212', // Koyu tema arka planı
-    paddingTop: 50,
-    paddingHorizontal: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-
-  // --- Kayıt Ekranı ve Timer ---
-  timerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 30,
-  },
-  timerText: {
-    fontSize: 60,
-    fontWeight: '300',
-    color: '#ffffff',
-    letterSpacing: 2,
-  },
-  recordingStatusText: {
-    color: '#ff4d4d', // Kayıt sırasında kırmızı "REC" yazısı için
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 5,
-    letterSpacing: 1,
-  },
-  pausedStatusText: {
-    color: '#ffd700', // Duraklatıldığında sarı renk
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 5,
-    letterSpacing: 1,
-  },
-
-  // --- Ses Dalgası (Visualizer) ---
-  visualizerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 100,
-    width: '100%',
-    marginBottom: 40,
-    // Bar'ların taşmasını engellemek için:
-    overflow: 'hidden', 
-  },
-  visualizerBar: {
-    width: 4,
-    backgroundColor: '#ff4d4d',
-    marginHorizontal: 1,
-    borderRadius: 2,
-  },
-
-  // --- Ana Kontroller (Kayıt Butonları) ---
-  controlsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 30,
-  },
-  // Büyük Kırmızı Kayıt Butonu (Başlangıç)
-  recordButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ff4d4d',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 5,
-    shadowColor: '#ff4d4d',
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
+    backgroundColor: '#121212',
+    paddingTop: 10,
   },
   
-  // Kayıt Sırasındaki Alt Kontroller (Durdur, Pause, İptal)
-  activeRecordingControls: {
+  // --- Header ---
+  header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    width: '100%',
     paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 20,
   },
-  // Küçük Yuvarlak Butonlar (Pause, Çöp Kutusu vb.)
-  secondaryButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#333',
-    alignItems: 'center',
-    justifyContent: 'center',
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    letterSpacing: 1,
   },
-  // Ortadaki Kare Stop Butonu
-  stopButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 10, // Karemsi görünüm
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 20,
+  subtitle: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  menuButton: {
+    padding: 8,
   },
 
-  // --- Önizleme / Seçilen Dosya Alanı ---
-  previewContainer: {
-    backgroundColor: '#1e1e1e',
+  // --- Menu Modal ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuContainer: {
+    backgroundColor: '#1E1E1E',
+    width: 250,
     padding: 20,
     borderRadius: 15,
-    alignItems: 'center',
-    marginBottom: 20,
     borderWidth: 1,
     borderColor: '#333',
   },
-  fileName: {
+  menuTitle: {
+    color: '#FFF',
     fontSize: 18,
-    color: '#fff',
+    fontWeight: 'bold',
     marginBottom: 15,
     textAlign: 'center',
   },
-  previewControls: {
+  menuItem: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  menuItemText: {
+    color: '#EEE',
+    fontSize: 16,
+    marginLeft: 15,
+  },
+
+  // --- Records Modal ---
+  recordsContainer: {
+    flex: 1,
+    backgroundColor: '#121212',
+    paddingTop: 50,
+    paddingHorizontal: 20,
+  },
+  recordsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  recordsTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  closeText: {
+    color: '#4A90E2',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recordItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E1E1E',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  recordPlayBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recordName: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  recordDate: {
+    color: '#777',
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  // --- Wave / Visualizer Area ---
+  waveContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  idleWaveContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: 60,
+    justifyContent: 'center',
+    gap: 5,
+  },
+  activeRecordingContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  timerText: {
+    fontSize: 60,
+    fontWeight: '200',
+    color: '#fff',
+    marginBottom: 20,
+    fontVariant: ['tabular-nums'],
+  },
+  waveBarRecord: {
+    width: 4,
+    marginHorizontal: 2,
+    borderRadius: 2,
+  },
+  
+  // --- Preview Card ---
+  filePreviewCard: {
+    width: '90%',
+    backgroundColor: '#1E1E1E',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 15,
+    left: 15,
+    zIndex: 10,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    zIndex: 10,
+  },
+  previewContent: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 75, 75, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  fileInfo: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  fileNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
+  },
+  fileName: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    maxWidth: 200,
+  },
+  renameInput: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '600',
+    borderBottomWidth: 1,
+    borderBottomColor: '#4A90E2',
+    textAlign: 'center',
+    minWidth: 150,
+  },
+  editIcon: {
+    marginLeft: 8,
+  },
+  fileStatus: {
+    color: '#666',
+    fontSize: 13,
+    marginBottom: 15,
+  },
+  miniWaveformContainer: {
+    height: 40,
     width: '100%',
     marginBottom: 15,
+  },
+  shareBtn: {
+    padding: 10,
+    backgroundColor: '#2A2A2A',
+    borderRadius: 50,
+  },
+
+  // --- Controls / Buttons ---
+  controlsContainer: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 40,
+    height: 180, 
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E1E1E',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    marginBottom: 20,
+  },
+  uploadText: {
+    color: '#A0A0A0',
+    fontSize: 14,
+    marginLeft: 10,
+    fontWeight: '500',
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#333',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    marginHorizontal: 5,
+    paddingVertical: 15,
+    paddingHorizontal: 25,
+    borderRadius: 30,
   },
-  actionButtonText: {
-    color: '#fff',
-    marginLeft: 5,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  saveButton: {
-    backgroundColor: '#007AFF', // Mavi Kaydet butonu
+  sendButton: {
+    backgroundColor: '#4A90E2',
   },
   
-  // --- Liste (Kayıtlı Dosyalar) ---
-  listContainer: {
-    flex: 1,
-    width: '100%',
-    marginTop: 10,
-  },
-  listHeader: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#aaa',
-    marginBottom: 10,
-    paddingLeft: 10,
-  },
-  card: {
-    backgroundColor: '#1e1e1e',
+  // Recording Controls
+  recordingControls: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+    justifyContent: 'center',
+    gap: 30,
   },
-  cardInfo: {
-    flex: 1,
+  smallControlBtn: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#1E1E1E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
   },
-  cardTitle: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '500',
-  },
-  cardDate: {
-    fontSize: 12,
+  recordLabel: {
     color: '#666',
-    marginTop: 4,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconButton: {
-    padding: 8,
-    marginLeft: 5,
-  },
-
-  // --- Yardımcı ---
-  divider: {
-    height: 1,
-    backgroundColor: '#333',
-    marginVertical: 20,
+    marginTop: 15,
+    fontSize: 14,
+    letterSpacing: 1,
   }
 });

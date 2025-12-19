@@ -7,12 +7,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sharing from 'expo-sharing';
 
 export const useAudioLogic = () => {
-    // States / Durumlar
     const [selectedFile, setSelectedFile] = useState(null);
     const [recording, setRecording] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
     const [duration, setDuration] = useState("00:00");
-    const [metering, setMetering] = useState([]); // Array to store all waveform levels / Tüm ses seviyelerini tutan dizi
+    const [metering, setMetering] = useState([]); 
     const [permissionResponse, requestPermission] = Audio.usePermissions();
     
     const [sound, setSound] = useState(null);
@@ -25,17 +25,13 @@ export const useAudioLogic = () => {
         return () => { if (sound) sound.unloadAsync(); };
     }, []);
 
-    // --- Core Functions / Temel Fonksiyonlar ---
+    // --- Kayıt Fonksiyonları ---
 
     const startRecording = async () => {
         try {
             if (permissionResponse.status !== 'granted') await requestPermission();
             await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-            
             const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-            
-            // Set update interval to 75ms for smooth animation
-            // Akıcı animasyon için güncelleme aralığını 75ms yap
             await recording.setProgressUpdateInterval(75);
             
             recording.setOnRecordingStatusUpdate((status) => {
@@ -46,22 +42,29 @@ export const useAudioLogic = () => {
                     setDuration(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
                     
                     const currentLevel = status.metering || -160;
-                    
-                    // Accumulate data: Add new level to the end of the array
-                    // Veri biriktirme: Yeni seviyeyi dizinin sonuna ekle
                     setMetering((prev) => [...prev, currentLevel]);
                 }
             });
 
             setRecording(recording);
             setIsRecording(true);
-            setMetering([]); // Clear old waveform / Eski dalgayı temizle
+            setIsPaused(false);
+            setMetering([]); 
             setSelectedFile(null);
         } catch (err) { Alert.alert("Error", "Failed to access microphone."); }
     };
 
+    const pauseRecording = async () => {
+        if (recording) { await recording.pauseAsync(); setIsPaused(true); }
+    };
+
+    const resumeRecording = async () => {
+        if (recording) { await recording.startAsync(); setIsPaused(false); }
+    };
+
     const stopRecording = async () => {
         setIsRecording(false);
+        setIsPaused(false);
         if (!recording) return;
         await recording.stopAndUnloadAsync();
         const uri = recording.getURI();
@@ -71,8 +74,17 @@ export const useAudioLogic = () => {
         }
     };
 
-    // ... (Diğer fonksiyonlar: playSound, saveRecordingToDevice, deleteRecording vb. aynen kalıyor)
-    // ... (Other functions remain the same)
+    const discardRecording = async () => {
+        setIsRecording(false);
+        setIsPaused(false);
+        if (!recording) return;
+        try { await recording.stopAndUnloadAsync(); } catch (error) {}
+        setRecording(null);
+        setMetering([]);
+        setDuration("00:00");
+    };
+
+    // --- Dosya İşlemleri ---
 
     const loadRecordings = async () => {
         try {
@@ -169,11 +181,26 @@ export const useAudioLogic = () => {
     };
 
     const clearSelection = () => { stopSound(); setSelectedFile(null); setMetering([]); };
-    const shareFile = async () => { if (selectedFile?.uri && await Sharing.isAvailableAsync()) await Sharing.shareAsync(selectedFile.uri); };
+    
+    const shareFile = async () => {
+        if (selectedFile?.uri && await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(selectedFile.uri);
+        }
+    };
+
+    // --- BU FONKSİYON EKSİKTİ, BU YÜZDEN HATA ALIYORDUN ---
+    const shareFileUri = async (uri) => {
+        if (uri && await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(uri);
+        }
+    };
 
     return {
-        selectedFile, isRecording, duration, metering, isPlaying, playingId, savedRecordings,
-        startRecording, stopRecording, playSound, stopSound, saveRecordingToDevice, deleteRecording, 
-        pickFile, loadFromLibrary, clearSelection, shareFile, renameRecording
+        selectedFile, isRecording, isPaused, duration, metering, isPlaying, playingId, savedRecordings,
+        startRecording, stopRecording, pauseRecording, resumeRecording, discardRecording,
+        playSound, stopSound, saveRecordingToDevice, deleteRecording, 
+        pickFile, loadFromLibrary, clearSelection, shareFile, 
+        shareFileUri, // <-- Bunu mutlaka buraya eklemelisin
+        renameRecording
     };
 };
