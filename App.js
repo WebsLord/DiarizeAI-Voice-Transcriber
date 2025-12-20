@@ -1,13 +1,19 @@
+// Fix for encryption random number generation (Must be at the top)
+// Şifreleme için rastgele sayı üretimi düzeltmesi (En üstte olmalı)
+import 'react-native-get-random-values';
+
 import React, { useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Text, View, TouchableOpacity, SafeAreaView, Alert, ScrollView, Modal, TextInput, Animated, Easing } from 'react-native';
 import { MaterialIcons, FontAwesome5, Ionicons, Entypo, Feather } from '@expo/vector-icons';
 
-// --- CUSTOM MODULES (DOĞRU DOSYA YOLLARI) ---
+// --- CUSTOM MODULES (CORRECT PATHS) ---
+// --- ÖZEL MODÜLLER (DOĞRU DOSYA YOLLARI) ---
 import styles from './src/styles/AppStyles';       
 import { useAudioLogic } from './src/hooks/useAudioLogic'; 
 
 // --- COMPONENTS ---
+// --- BİLEŞENLER ---
 import { PulsingGlowButton } from './src/components/PulsingButton';
 import { PlaybackWaveBar, AnimatedWaveBar } from './src/components/WaveBars'; 
 import { RecordsModal } from './src/components/RecordsModal';
@@ -23,6 +29,7 @@ export default function App() {
   } = useAudioLogic();
 
   // UI States
+  // Arayüz Durumları
   const [isMenuVisible, setIsMenuVisible] = useState(false); 
   const [isRecordsVisible, setIsRecordsVisible] = useState(false); 
   const [isEditingName, setIsEditingName] = useState(false);
@@ -30,25 +37,30 @@ export default function App() {
 
   const scrollViewRef = useRef();
   
-  // TRASH ANIMATION VALUES (ÇÖP ANİMASYONU)
+  // TRASH ANIMATION VALUES
+  // ÇÖP KUTUSU ANİMASYON DEĞERLERİ
   const trashScale = useRef(new Animated.Value(1)).current;
   const trashTranslateY = useRef(new Animated.Value(0)).current;
   const trashOpacity = useRef(new Animated.Value(1)).current;
 
   // --- UI HANDLERS ---
+  // --- ARAYÜZ İŞLEYİCİLERİ ---
   
   const handleRecordPress = () => { startRecording(); }; 
   
   const handleTrashPress = () => {
+      // 1. Start Animation
       // 1. Animasyonu Başlat
       Animated.parallel([
           Animated.timing(trashScale, { toValue: 0, duration: 400, useNativeDriver: true }),
           Animated.timing(trashTranslateY, { toValue: 200, duration: 400, useNativeDriver: true }),
           Animated.timing(trashOpacity, { toValue: 0, duration: 400, useNativeDriver: true })
       ]).start(() => {
+          // 2. Delete Recording
           // 2. Kaydı Sil
           discardRecording();
           
+          // 3. Reset Animation
           // 3. Animasyonu Sıfırla
           setTimeout(() => {
               trashScale.setValue(1);
@@ -75,7 +87,9 @@ export default function App() {
   };
 
   const normalizeWave = (db) => {
-      const minDb = -80; const maxHeight = 35; // Yüksekliği scale için ayarladık
+      // Set height for scale
+      // Ölçeklendirme için yüksekliği ayarla
+      const minDb = -80; const maxHeight = 35; 
       if (db < minDb) return 5; 
       let height = ((db - minDb) / (0 - minDb)) * maxHeight;
       return Math.max(5, height);
@@ -86,6 +100,7 @@ export default function App() {
       <StatusBar style="light" />
       
       {/* 1. HEADER */}
+      {/* 1. BAŞLIK */}
       <View style={styles.header}>
         <View style={{width: 40}} /> 
         <View style={{alignItems: 'center'}}>
@@ -98,6 +113,7 @@ export default function App() {
       </View>
 
       {/* 2. MENUS */}
+      {/* 2. MENÜLER */}
       <Modal visible={isMenuVisible} transparent={true} animationType="fade" onRequestClose={() => setIsMenuVisible(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsMenuVisible(false)}>
               <View style={styles.menuContainer}>
@@ -114,11 +130,13 @@ export default function App() {
           </TouchableOpacity>
       </Modal>
 
-      {/* 3. RECORDS MODAL (LİSTE) */}
+      {/* 3. RECORDS MODAL (LIST) */}
+      {/* 3. KAYITLAR MODALI (LİSTE) */}
       <RecordsModal 
         visible={isRecordsVisible}
         onClose={() => { stopSound(); setIsRecordsVisible(false); }}
         recordings={savedRecordings}
+        // FIX HERE: Close list when file selected so screen is visible
         // DÜZELTME BURADA: Dosya seçilince listeyi kapatıyoruz ki ekran görünsün
         onLoad={(item) => {
             loadFromLibrary(item);
@@ -131,9 +149,11 @@ export default function App() {
         isPlaying={isPlaying}
       />
 
-      {/* 4. VISUALIZER AREA (GÖRSEL ALAN) */}
+      {/* 4. VISUALIZER AREA */}
+      {/* 4. GÖRSELLEŞTİRİCİ ALANI */}
       <View style={styles.waveContainer}>
-        {/* CASE A: RECORDING (KAYIT) */}
+        {/* CASE A: RECORDING */}
+        {/* DURUM A: KAYIT */}
         {isRecording || isPaused ? (
              <Animated.View 
                 style={[
@@ -160,7 +180,8 @@ export default function App() {
                  </View>
              </Animated.View>
         ) 
-        /* CASE B: PREVIEW (ÖNİZLEME) */
+        /* CASE B: PREVIEW */
+        /* DURUM B: ÖNİZLEME */
         : selectedFile ? (
             <View style={styles.filePreviewCard}>
                 <TouchableOpacity onPress={handleBackPress} style={styles.backButton}><Ionicons name="arrow-back" size={24} color="#A0A0A0" /></TouchableOpacity>
@@ -201,7 +222,8 @@ export default function App() {
                 </View>
             </View>
         ) 
-        /* CASE C: IDLE (BOŞTA) */
+        /* CASE C: IDLE */
+        /* DURUM C: BOŞTA */
         : (
             <View style={styles.idleWaveContainer}>
                 {[...Array(5)].map((_, index) => (<AnimatedWaveBar key={index} />))}
@@ -209,7 +231,8 @@ export default function App() {
         )}
       </View>
 
-      {/* 5. CONTROLS (BUTONLAR) */}
+      {/* 5. CONTROLS */}
+      {/* 5. KONTROLLER */}
       <View style={styles.controlsContainer}>
         {!selectedFile && !isRecording && !isPaused ? (
             <TouchableOpacity style={styles.uploadButton} onPress={pickFile}>
@@ -232,26 +255,31 @@ export default function App() {
         )}
 
         {/* RECORDING STATE CONTROLS */}
+        {/* KAYIT DURUMU KONTROLLERİ */}
         {(isRecording || isPaused) ? (
             <View style={styles.recordingControls}>
-                {/* TRASH (ÇÖP) */}
+                {/* TRASH (LEFT) */}
+                {/* ÇÖP KUTUSU (SOL) */}
                 <TouchableOpacity style={styles.smallControlBtn} onPress={handleTrashPress}>
                     <Ionicons name="trash-outline" size={24} color="#FF4B4B" />
                 </TouchableOpacity>
 
                 {/* PAUSE/RESUME */}
+                {/* DURAKLAT/DEVAM ET */}
                 <TouchableOpacity style={[styles.smallControlBtn, {width: 60, height: 60, borderRadius: 30, backgroundColor: '#4A90E2', borderColor: '#4A90E2'}]} 
                     onPress={isPaused ? resumeRecording : pauseRecording}>
                     <FontAwesome5 name={isPaused ? "play" : "pause"} size={24} color="white" />
                 </TouchableOpacity>
 
-                {/* STOP (DURDUR) */}
+                {/* STOP (MAIN) */}
+                {/* DURDUR (ANA) */}
                 <TouchableOpacity onPress={stopRecording}>
                     <PulsingGlowButton onPress={stopRecording} isRecording={true} />
                 </TouchableOpacity>
             </View>
         ) : !selectedFile ? (
             // IDLE RECORD BUTTON
+            // BOŞTA KAYIT BUTONU
             <>
                 <PulsingGlowButton onPress={handleRecordPress} isRecording={false} />
                 <Text style={styles.recordLabel}>Tap to Record</Text>
