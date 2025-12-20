@@ -1,3 +1,6 @@
+// This is our api caller
+// Api çağrıcımız
+import { apiService } from './src/services/api';
 // Fix for encryption random number generation (Must be at the top)
 // Şifreleme için rastgele sayı üretimi düzeltmesi (En üstte olmalı)
 import 'react-native-get-random-values';
@@ -57,19 +60,42 @@ export default function App() {
   
   const handleRecordPress = () => { startRecording(); }; 
   
-  // NEW FUNCTION: Runs when Process button is pressed
-  // YENİ FONKSİYON: Process butonuna basınca çalışır
-  const handleProcessPress = () => {
-    // 1. Start Loading
-    // 1. Yüklemeyi Başlat
+  // NEW: Smart Process Function (Try API -> Fallback to Mock)
+  // YENİ: Akıllı İşlem Fonksiyonu (API Dene -> Olmazsa Mock Kullan)
+  const handleProcessPress = async () => {
+    if (!selectedFile) return;
+    
     setIsProcessing(true);
 
-    // 2. Wait 2 Seconds (Mocking server request)
-    // 2. 2 Saniye Bekle (Sunucu isteğini taklit etme)
-    setTimeout(() => {
-        setIsProcessing(false);
-        setIsAnalysisVisible(true); // Open result screen / Sonuç ekranını aç
-    }, 2000);
+    try {
+        // A. TRY REAL BACKEND FIRST
+        // A. ÖNCE GERÇEK BACKEND'İ DENE
+        console.log("Attempting to upload to backend...");
+        // const uploadResult = await apiService.uploadAudio(selectedFile.uri);
+        // const result = await apiService.pollUntilComplete(uploadResult.process_id);
+        
+        // --- TEMPORARY: FORCE ERROR TO USE MOCK DATA ---
+        // --- GEÇİCİ: MOCK DATAYI KULLANMAK İÇİN HATA FIRLAT ---
+        // (Ozan backend'i verene kadar bu satır açık kalsın)
+        throw new Error("Backend not ready yet, switching to simulation."); 
+
+        // If success (future):
+        // setAnalysisData(result); // We will need to implement this dynamic data passing later
+        // setIsAnalysisVisible(true);
+
+    } catch (error) {
+        // B. FALLBACK TO SIMULATION (DEMO MODE)
+        // B. SİMÜLASYONA GEÇİŞ (DEMO MODU)
+        console.log("Backend unavailable, using mock data:", error.message);
+        
+        // Fake delay for realism
+        // Gerçekçilik için sahte gecikme
+        setTimeout(() => {
+            setIsProcessing(false);
+            setIsAnalysisVisible(true); 
+            Alert.alert("Simulation Mode", "Backend unreachable. Showing demo results.");
+        }, 2000);
+    }
   };
 
   const handleTrashPress = () => {

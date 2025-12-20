@@ -76,3 +76,5 @@ ios/
 .env
 .env.local
 *.pem
+
+api.js
