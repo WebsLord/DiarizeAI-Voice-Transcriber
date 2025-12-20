@@ -4,7 +4,7 @@ import 'react-native-get-random-values';
 
 import React, { useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Text, View, TouchableOpacity, SafeAreaView, Alert, ScrollView, Modal, TextInput, Animated, Easing } from 'react-native';
+import { Text, View, TouchableOpacity, SafeAreaView, Alert, ScrollView, Modal, TextInput, Animated, Easing, ActivityIndicator } from 'react-native';
 import { MaterialIcons, FontAwesome5, Ionicons, Entypo, Feather } from '@expo/vector-icons';
 
 // --- CUSTOM MODULES (CORRECT PATHS) ---
@@ -17,6 +17,9 @@ import { useAudioLogic } from './src/hooks/useAudioLogic';
 import { PulsingGlowButton } from './src/components/PulsingButton';
 import { PlaybackWaveBar, AnimatedWaveBar } from './src/components/WaveBars'; 
 import { RecordsModal } from './src/components/RecordsModal';
+// NEW COMPONENT: Analysis Result Screen
+// YENİ BİLEŞEN: Analiz Sonuç Ekranı
+import { AnalysisModal } from './src/components/AnalysisModal';
 
 export default function App() {
   
@@ -32,6 +35,12 @@ export default function App() {
   // Arayüz Durumları
   const [isMenuVisible, setIsMenuVisible] = useState(false); 
   const [isRecordsVisible, setIsRecordsVisible] = useState(false); 
+  
+  // NEW STATES: For Analysis Screen and Loading
+  // YENİ DURUMLAR: Analiz Ekranı ve Yükleniyor durumu için
+  const [isAnalysisVisible, setIsAnalysisVisible] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const [isEditingName, setIsEditingName] = useState(false);
   const [newFileName, setNewFileName] = useState("");
 
@@ -48,6 +57,21 @@ export default function App() {
   
   const handleRecordPress = () => { startRecording(); }; 
   
+  // NEW FUNCTION: Runs when Process button is pressed
+  // YENİ FONKSİYON: Process butonuna basınca çalışır
+  const handleProcessPress = () => {
+    // 1. Start Loading
+    // 1. Yüklemeyi Başlat
+    setIsProcessing(true);
+
+    // 2. Wait 2 Seconds (Mocking server request)
+    // 2. 2 Saniye Bekle (Sunucu isteğini taklit etme)
+    setTimeout(() => {
+        setIsProcessing(false);
+        setIsAnalysisVisible(true); // Open result screen / Sonuç ekranını aç
+    }, 2000);
+  };
+
   const handleTrashPress = () => {
       // 1. Start Animation
       // 1. Animasyonu Başlat
@@ -130,14 +154,14 @@ export default function App() {
           </TouchableOpacity>
       </Modal>
 
-      {/* 3. RECORDS MODAL (LIST) */}
-      {/* 3. KAYITLAR MODALI (LİSTE) */}
+      {/* RECORDS MODAL */}
+      {/* KAYITLAR MODALI */}
       <RecordsModal 
         visible={isRecordsVisible}
         onClose={() => { stopSound(); setIsRecordsVisible(false); }}
         recordings={savedRecordings}
-        // FIX HERE: Close list when file selected so screen is visible
-        // DÜZELTME BURADA: Dosya seçilince listeyi kapatıyoruz ki ekran görünsün
+        // Fix: Close list when file selected so screen is visible
+        // Düzeltme: Dosya seçilince listeyi kapatıyoruz ki ekran görünsün
         onLoad={(item) => {
             loadFromLibrary(item);
             setIsRecordsVisible(false);
@@ -147,6 +171,13 @@ export default function App() {
         onShare={shareFileUri} 
         playingId={playingId}
         isPlaying={isPlaying}
+      />
+
+      {/* NEW: Analysis Result Modal */}
+      {/* YENİ: Analiz Sonuç Modalı */}
+      <AnalysisModal 
+        visible={isAnalysisVisible} 
+        onClose={() => setIsAnalysisVisible(false)} 
       />
 
       {/* 4. VISUALIZER AREA */}
@@ -247,9 +278,22 @@ export default function App() {
                     <FontAwesome5 name="save" size={20} color="#A0A0A0" />
                     <Text style={[styles.uploadText, {marginLeft: 8}]}>Save</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionButton, styles.sendButton]} onPress={() => Alert.alert("Ready", "Sending to API...")}>
-                    <FontAwesome5 name="paper-plane" size={20} color="white" />
-                    <Text style={[styles.uploadText, {color: 'white', marginLeft: 8}]}>Process</Text>
+
+                {/* PROCESS BUTTON UPDATED: Loading state and new function added */}
+                {/* PROCESS BUTONU GÜNCELLENDİ: Loading durumu ve yeni fonksiyon eklendi */}
+                <TouchableOpacity 
+                    style={[styles.actionButton, styles.sendButton, isProcessing && {opacity: 0.7}]} 
+                    onPress={handleProcessPress}
+                    disabled={isProcessing}
+                >
+                    {isProcessing ? (
+                        <ActivityIndicator color="#FFF" size="small" />
+                    ) : (
+                        <FontAwesome5 name="paper-plane" size={20} color="white" />
+                    )}
+                    <Text style={[styles.uploadText, {color: 'white', marginLeft: 8}]}>
+                        {isProcessing ? "Processing..." : "Process"}
+                    </Text>
                 </TouchableOpacity>
             </View>
         )}
