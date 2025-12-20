@@ -2,10 +2,17 @@
 // Şifreleme için rastgele sayı üretimi düzeltmesi (En üstte olmalı)
 import 'react-native-get-random-values';
 
+// Initialize i18n (Language Support) - ADDED
+// i18n Başlat (Dil Desteği) - EKLENDİ
+import './src/services/i18n'; 
+
 import React, { useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Text, View, TouchableOpacity, SafeAreaView, Alert, ScrollView, Modal, TextInput, Animated, Easing, ActivityIndicator } from 'react-native';
 import { MaterialIcons, FontAwesome5, Ionicons, Entypo, Feather } from '@expo/vector-icons';
+// Import Translation Hook - ADDED
+// Çeviri Kancasını İçe Aktar - EKLENDİ
+import { useTranslation } from 'react-i18next'; 
 
 // --- CUSTOM MODULES (CORRECT PATHS) ---
 // --- ÖZEL MODÜLLER (DOĞRU DOSYA YOLLARI) ---
@@ -21,9 +28,16 @@ import { PulsingGlowButton } from './src/components/PulsingButton';
 import { PlaybackWaveBar, AnimatedWaveBar } from './src/components/WaveBars'; 
 import { RecordsModal } from './src/components/RecordsModal';
 import { AnalysisModal } from './src/components/AnalysisModal';
+// Settings Modal - ADDED
+// Ayarlar Modalı - EKLENDİ
+import { SettingsModal } from './src/components/SettingsModal';
 
 export default function App() {
   
+  // Translation hook - ADDED
+  // Çeviri kancası - EKLENDİ
+  const { t } = useTranslation();
+
   const {
       selectedFile, isRecording, isPaused, duration, metering,
       isPlaying, playingId, savedRecordings,
@@ -37,8 +51,9 @@ export default function App() {
   const [isMenuVisible, setIsMenuVisible] = useState(false); 
   const [isRecordsVisible, setIsRecordsVisible] = useState(false); 
   
-  // NEW STATES: For Analysis Screen and Loading
-  // YENİ DURUMLAR: Analiz Ekranı ve Yükleniyor durumu için
+  // NEW STATES: For Settings, Analysis Screen and Loading
+  // YENİ DURUMLAR: Ayarlar, Analiz Ekranı ve Yükleniyor durumu için
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false); // ADDED / EKLENDİ
   const [isAnalysisVisible, setIsAnalysisVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -91,7 +106,9 @@ export default function App() {
         setTimeout(() => {
             setIsProcessing(false);
             setIsAnalysisVisible(true); 
-            Alert.alert("Simulation Mode", "Backend unreachable. Showing demo results.");
+            // ALERT TRANSLATED
+            // UYARI ÇEVRİLDİ
+            Alert.alert(t('alert_simulation'), t('alert_backend_down'));
         }, 2000);
     }
   };
@@ -119,8 +136,15 @@ export default function App() {
   };
 
   const handleBackPress = () => {
-      Alert.alert("Delete Recording", "Recording will be deleted. Are you sure?",
-          [{ text: "Cancel", style: "cancel" }, { text: "Yes, Delete", style: "destructive", onPress: clearSelection }]
+      // ALERT TRANSLATED
+      // UYARI ÇEVRİLDİ
+      Alert.alert(
+          t('alert_delete_title'), 
+          t('alert_delete_msg'),
+          [
+              { text: t('btn_cancel'), style: "cancel" }, 
+              { text: t('btn_yes'), style: "destructive", onPress: clearSelection }
+          ]
       );
   };
 
@@ -169,8 +193,10 @@ export default function App() {
       <View style={styles.header}>
         <View style={{width: 40}} /> 
         <View style={{alignItems: 'center'}}>
-            <Text style={styles.title}>Diarize AI</Text>
-            <Text style={styles.subtitle}>Live audio now converts to text</Text>
+            {/* TEXT TRANSLATED */}
+            {/* METİN ÇEVRİLDİ */}
+            <Text style={styles.title}>{t('app_title')}</Text>
+            <Text style={styles.subtitle}>{t('app_subtitle')}</Text>
         </View>
         <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuVisible(true)}>
             <Feather name="menu" size={28} color="#E0E0E0" />
@@ -182,14 +208,32 @@ export default function App() {
       <Modal visible={isMenuVisible} transparent={true} animationType="fade" onRequestClose={() => setIsMenuVisible(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsMenuVisible(false)}>
               <View style={styles.menuContainer}>
-                  <Text style={styles.menuTitle}>Menu</Text>
+                  {/* DYNAMIC TITLE */}
+                  {/* DİNAMİK BAŞLIK */}
+                  <Text style={styles.menuTitle}>{t('menu')}</Text>
+                  
+                  {/* Records Button */}
+                  {/* Kayıtlar Butonu */}
                   <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuVisible(false); setTimeout(() => setIsRecordsVisible(true), 300); }}>
                       <MaterialIcons name="library-music" size={24} color="#4A90E2" />
-                      <Text style={styles.menuItemText}>Records</Text>
+                      {/* TRANSLATED TEXT */}
+                      {/* ÇEVRİLMİŞ METİN */}
+                      <Text style={styles.menuItemText}>{t('saved_recordings')}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.menuItem, {opacity: 0.5}]} disabled={true}>
+
+                  {/* Settings Button - ADDED */}
+                  {/* Ayarlar Butonu - EKLENDİ */}
+                  <TouchableOpacity 
+                    style={styles.menuItem} 
+                    onPress={() => { 
+                        setIsMenuVisible(false); 
+                        setTimeout(() => setIsSettingsVisible(true), 300); 
+                    }}
+                  >
                       <Ionicons name="settings-outline" size={24} color="#777" />
-                      <Text style={styles.menuItemText}>Settings (Soon)</Text>
+                      {/* TRANSLATED TEXT */}
+                      {/* ÇEVRİLMİŞ METİN */}
+                      <Text style={styles.menuItemText}>{t('settings')}</Text>
                   </TouchableOpacity>
               </View>
           </TouchableOpacity>
@@ -210,16 +254,23 @@ export default function App() {
         onDelete={deleteRecording}
         onPlay={playSound}
         onShare={shareFileUri} 
-        onRename={handleListRename} // <-- MISSING PROP ADDED HERE / EKSİK PROP BURAYA EKLENDİ
+        onRename={handleListRename} // Keeps the Rename functionality / Yeniden adlandırma işlevini korur
         playingId={playingId}
         isPlaying={isPlaying}
       />
 
-      {/* NEW: Analysis Result Modal */}
-      {/* YENİ: Analiz Sonuç Modalı */}
+      {/* ANALYSIS RESULT MODAL */}
+      {/* ANALİZ SONUÇ MODALI */}
       <AnalysisModal 
         visible={isAnalysisVisible} 
         onClose={() => setIsAnalysisVisible(false)} 
+      />
+
+      {/* SETTINGS MODAL - ADDED */}
+      {/* AYARLAR MODALI - EKLENDİ */}
+      <SettingsModal 
+        visible={isSettingsVisible} 
+        onClose={() => setIsSettingsVisible(false)} 
       />
 
       {/* 4. VISUALIZER AREA */}
@@ -279,7 +330,9 @@ export default function App() {
                                 </TouchableOpacity>
                             )}
                         </View>
-                        <Text style={styles.fileStatus}>{(playingId === 'preview' && isPlaying) ? "Playing..." : "Ready to Process"}</Text>
+                        {/* TRANSLATED: Status */}
+                        {/* ÇEVRİLDİ: Durum */}
+                        <Text style={styles.fileStatus}>{(playingId === 'preview' && isPlaying) ? t('processing') : t('alert_ready')}</Text>
                         
                         {metering.length > 0 && (
                             <View style={styles.miniWaveformContainer}>
@@ -310,7 +363,9 @@ export default function App() {
         {!selectedFile && !isRecording && !isPaused ? (
             <TouchableOpacity style={styles.uploadButton} onPress={pickFile}>
                 <FontAwesome5 name="cloud-upload-alt" size={24} color="#A0A0A0" />
-                <Text style={styles.uploadText}>Select Audio File</Text>
+                {/* FIXED HERE: Using 'select_audio' instead of 'tap_to_record' */}
+                {/* BURADA DÜZELTİLDİ: 'tap_to_record' yerine 'select_audio' kullanılıyor */}
+                <Text style={styles.uploadText}>{t('select_audio')}</Text>
             </TouchableOpacity>
         ) : null}
         
@@ -318,7 +373,8 @@ export default function App() {
             <View style={{flexDirection: 'row', gap: 10}}>
                 <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#333'}]} onPress={saveRecordingToDevice}>
                     <FontAwesome5 name="save" size={20} color="#A0A0A0" />
-                    <Text style={[styles.uploadText, {marginLeft: 8}]}>Save</Text>
+                    {/* TRANSLATED */}
+                    <Text style={[styles.uploadText, {marginLeft: 8}]}>{t('save')}</Text>
                 </TouchableOpacity>
 
                 {/* PROCESS BUTTON */}
@@ -333,8 +389,9 @@ export default function App() {
                     ) : (
                         <FontAwesome5 name="paper-plane" size={20} color="white" />
                     )}
+                    {/* TRANSLATED */}
                     <Text style={[styles.uploadText, {color: 'white', marginLeft: 8}]}>
-                        {isProcessing ? "Processing..." : "Process"}
+                        {isProcessing ? t('processing') : t('process')}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -368,7 +425,8 @@ export default function App() {
             // BOŞTA KAYIT BUTONU
             <>
                 <PulsingGlowButton onPress={handleRecordPress} isRecording={false} />
-                <Text style={styles.recordLabel}>Tap to Record</Text>
+                {/* TRANSLATED */}
+                <Text style={styles.recordLabel}>{t('tap_to_record')}</Text>
             </>
         ) : null}
       </View>

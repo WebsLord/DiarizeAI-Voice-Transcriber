@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, FlatList } from 'react-native';
 import { FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next'; // ADDED: Translation hook / EKLENDİ: Çeviri kancası
 
 // --- CUSTOM MODULES ---
 // --- ÖZEL MODÜLLER ---
@@ -24,6 +25,10 @@ export const RecordsModal = ({
     isPlaying 
 }) => {
     
+    // Initialize Translation Hook
+    // Çeviri Kancasını Başlat
+    const { t } = useTranslation();
+
     // Ensure styles object is loaded to prevent crashes
     // Çökme yaşanmaması için styles nesnesinin yüklendiğinden emin olun
     if (!styles) return null;
@@ -40,9 +45,11 @@ export const RecordsModal = ({
                 {/* 1. HEADER SECTION */}
                 {/* 1. BAŞLIK BÖLÜMÜ */}
                 <View style={styles.recordsHeader}>
-                    <Text style={styles.recordsTitle}>Saved Recordings</Text>
+                    {/* TRANSLATED TITLE */}
+                    {/* ÇEVRİLMİŞ BAŞLIK */}
+                    <Text style={styles.recordsTitle}>{t('saved_recordings')}</Text>
                     <TouchableOpacity onPress={onClose}>
-                        <Text style={styles.closeText}>Close</Text>
+                        <Text style={styles.closeText}>{t('close')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -53,7 +60,9 @@ export const RecordsModal = ({
                     // --- BOŞ DURUM ---
                     <View style={styles.emptyState}>
                         <FontAwesome5 name="ghost" size={50} color="#333" />
-                        <Text style={{ color: '#555', marginTop: 10 }}>No recordings found.</Text>
+                        {/* TRANSLATED TEXT */}
+                        {/* ÇEVRİLMİŞ METİN */}
+                        <Text style={{ color: '#555', marginTop: 10 }}>{t('no_recordings')}</Text>
                     </View>
                 ) : (
                     // --- RECORDINGS LIST ---
@@ -86,14 +95,14 @@ export const RecordsModal = ({
                                     {/* C. İŞLEMLER GRUBU */}
                                     <View style={{flexDirection: 'row'}}>
                                         
-                                        {/* 1. Rename Button (New) */}
-                                        {/* 1. Yeniden Adlandır Butonu (Yeni) */}
+                                        {/* 1. Rename Button */}
+                                        {/* 1. Yeniden Adlandır Butonu */}
                                         <TouchableOpacity onPress={() => onRename(item)} style={{ padding: 10 }}>
                                             <Feather name="edit-2" size={20} color="#4A90E2" />
                                         </TouchableOpacity>
 
-                                        {/* 2. Download/Save Button */}
-                                        {/* 2. İndir/Kaydet Butonu */}
+                                        {/* 2. Download/Save Button (Updated Icon: Download) */}
+                                        {/* 2. İndir/Kaydet Butonu (Güncellenmiş İkon: İndir) */}
                                         <TouchableOpacity onPress={() => onShare(item.uri)} style={{ padding: 10 }}>
                                             <Feather name="download" size={20} color="#4A90E2" />
                                         </TouchableOpacity>
