@@ -2,42 +2,37 @@
 // Şifreleme için rastgele sayı üretimi düzeltmesi (En üstte olmalı)
 import 'react-native-get-random-values';
 
-// Initialize i18n (Language Support) - ADDED
-// i18n Başlat (Dil Desteği) - EKLENDİ
+// Initialize i18n
+// i18n Başlat
 import './src/services/i18n'; 
 
 import React, { useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Text, View, TouchableOpacity, SafeAreaView, Alert, ScrollView, Modal, TextInput, Animated, Easing, ActivityIndicator } from 'react-native';
-import { MaterialIcons, FontAwesome5, Ionicons, Entypo, Feather } from '@expo/vector-icons';
-// Import Translation Hook - ADDED
-// Çeviri Kancasını İçe Aktar - EKLENDİ
+import { View, TouchableOpacity, SafeAreaView, Alert, Modal, Text, Animated } from 'react-native';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next'; 
 
-// --- CUSTOM MODULES (CORRECT PATHS) ---
-// --- ÖZEL MODÜLLER (DOĞRU DOSYA YOLLARI) ---
+// --- CUSTOM MODULES ---
 import styles from './src/styles/AppStyles';       
 import { useAudioLogic } from './src/hooks/useAudioLogic'; 
-// API Service for backend communication
-// Backend iletişimi için API Servisi
-import { apiService } from './src/services/api';
 
-// --- COMPONENTS ---
-// --- BİLEŞENLER ---
-import { PulsingGlowButton } from './src/components/PulsingButton';
-import { PlaybackWaveBar, AnimatedWaveBar } from './src/components/WaveBars'; 
+// --- SUB-COMPONENTS (Refactored) ---
+// --- ALT BİLEŞENLER (Yeniden Düzenlendi) ---
+import { Header } from './src/components/dashboard/Header';
+import { Visualizer } from './src/components/dashboard/Visualizer';
+import { Controls } from './src/components/dashboard/Controls';
+
+// --- MODALS ---
 import { RecordsModal } from './src/components/RecordsModal';
 import { AnalysisModal } from './src/components/AnalysisModal';
-// Settings Modal - ADDED
-// Ayarlar Modalı - EKLENDİ
 import { SettingsModal } from './src/components/SettingsModal';
 
 export default function App() {
   
-  // Translation hook - ADDED
-  // Çeviri kancası - EKLENDİ
   const { t } = useTranslation();
 
+  // Audio Logic Hook
+  // Ses Mantığı Kancası
   const {
       selectedFile, isRecording, isPaused, duration, metering,
       isPlaying, playingId, savedRecordings,
@@ -47,86 +42,49 @@ export default function App() {
   } = useAudioLogic();
 
   // UI States
-  // Arayüz Durumları
   const [isMenuVisible, setIsMenuVisible] = useState(false); 
   const [isRecordsVisible, setIsRecordsVisible] = useState(false); 
-  
-  // NEW STATES: For Settings, Analysis Screen and Loading
-  // YENİ DURUMLAR: Ayarlar, Analiz Ekranı ve Yükleniyor durumu için
-  const [isSettingsVisible, setIsSettingsVisible] = useState(false); // ADDED / EKLENDİ
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [isAnalysisVisible, setIsAnalysisVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Rename States
   const [isEditingName, setIsEditingName] = useState(false);
   const [newFileName, setNewFileName] = useState("");
 
-  const scrollViewRef = useRef();
-  
-  // TRASH ANIMATION VALUES
-  // ÇÖP KUTUSU ANİMASYON DEĞERLERİ
+  // Animation Values
   const trashScale = useRef(new Animated.Value(1)).current;
   const trashTranslateY = useRef(new Animated.Value(0)).current;
   const trashOpacity = useRef(new Animated.Value(1)).current;
 
-  // --- UI HANDLERS ---
-  // --- ARAYÜZ İŞLEYİCİLERİ ---
+  // --- HANDLERS ---
   
   const handleRecordPress = () => { startRecording(); }; 
   
-  // NEW: Smart Process Function (Try API -> Fallback to Mock)
-  // YENİ: Akıllı İşlem Fonksiyonu (API Dene -> Olmazsa Mock Kullan)
   const handleProcessPress = async () => {
     if (!selectedFile) return;
-    
     setIsProcessing(true);
-
     try {
-        // A. TRY REAL BACKEND FIRST
-        // A. ÖNCE GERÇEK BACKEND'İ DENE
         console.log("Attempting to upload to backend...");
-        // const uploadResult = await apiService.uploadAudio(selectedFile.uri);
-        // const result = await apiService.pollUntilComplete(uploadResult.process_id);
-        
-        // --- TEMPORARY: FORCE ERROR TO USE MOCK DATA ---
-        // --- GEÇİCİ: MOCK DATAYI KULLANMAK İÇİN HATA FIRLAT ---
-        // (Ozan backend'i verene kadar bu satır açık kalsın)
-        throw new Error("Backend not ready yet, switching to simulation."); 
-
-        // If success (future):
-        // setAnalysisData(result); // We will need to implement this dynamic data passing later
-        // setIsAnalysisVisible(true);
-
+        // Simulation error for demo
+        throw new Error("Backend not ready yet"); 
     } catch (error) {
-        // B. FALLBACK TO SIMULATION (DEMO MODE)
-        // B. SİMÜLASYONA GEÇİŞ (DEMO MODU)
-        console.log("Backend unavailable, using mock data:", error.message);
-        
-        // Fake delay for realism
-        // Gerçekçilik için sahte gecikme
+        console.log("Backend unavailable:", error.message);
         setTimeout(() => {
             setIsProcessing(false);
             setIsAnalysisVisible(true); 
-            // ALERT TRANSLATED
-            // UYARI ÇEVRİLDİ
             Alert.alert(t('alert_simulation'), t('alert_backend_down'));
         }, 2000);
     }
   };
 
   const handleTrashPress = () => {
-      // 1. Start Animation
-      // 1. Animasyonu Başlat
       Animated.parallel([
           Animated.timing(trashScale, { toValue: 0, duration: 400, useNativeDriver: true }),
           Animated.timing(trashTranslateY, { toValue: 200, duration: 400, useNativeDriver: true }),
           Animated.timing(trashOpacity, { toValue: 0, duration: 400, useNativeDriver: true })
       ]).start(() => {
-          // 2. Delete Recording
-          // 2. Kaydı Sil
           discardRecording();
-          
-          // 3. Reset Animation
-          // 3. Animasyonu Sıfırla
           setTimeout(() => {
               trashScale.setValue(1);
               trashTranslateY.setValue(0);
@@ -136,8 +94,6 @@ export default function App() {
   };
 
   const handleBackPress = () => {
-      // ALERT TRANSLATED
-      // UYARI ÇEVRİLDİ
       Alert.alert(
           t('alert_delete_title'), 
           t('alert_delete_msg'),
@@ -158,278 +114,72 @@ export default function App() {
       setIsEditingName(true);
   };
 
-  // NEW: Handle rename from the modal list
-  // YENİ: Modal listesinden yeniden adlandırmayı yönet
   const handleListRename = (item) => {
-      // 1. Load the selected file
-      // 1. Seçilen dosyayı yükle
       loadFromLibrary(item);
-      
-      // 2. Close the modal
-      // 2. Modalı kapat
       setIsRecordsVisible(false);
-      
-      // 3. Setup renaming state to trigger input immediately
-      // 3. Girdiyi hemen tetiklemek için yeniden adlandırma durumunu ayarla
       setNewFileName(item.name.replace('.m4a', ''));
       setIsEditingName(true);
-  };
-
-  const normalizeWave = (db) => {
-      // Set height for scale
-      // Ölçeklendirme için yüksekliği ayarla
-      const minDb = -80; const maxHeight = 35; 
-      if (db < minDb) return 5; 
-      let height = ((db - minDb) / (0 - minDb)) * maxHeight;
-      return Math.max(5, height);
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* 1. HEADER */}
-      {/* 1. BAŞLIK */}
-      <View style={styles.header}>
-        <View style={{width: 40}} /> 
-        <View style={{alignItems: 'center'}}>
-            {/* TEXT TRANSLATED */}
-            {/* METİN ÇEVRİLDİ */}
-            <Text style={styles.title}>{t('app_title')}</Text>
-            <Text style={styles.subtitle}>{t('app_subtitle')}</Text>
-        </View>
-        <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuVisible(true)}>
-            <Feather name="menu" size={28} color="#E0E0E0" />
-        </TouchableOpacity>
-      </View>
+      {/* 1. HEADER COMPONENT */}
+      {/* 1. BAŞLIK BİLEŞENİ */}
+      <Header onMenuPress={() => setIsMenuVisible(true)} />
 
-      {/* 2. MENUS */}
-      {/* 2. MENÜLER */}
+      {/* 2. VISUALIZER COMPONENT */}
+      {/* 2. GÖRSELLEŞTİRİCİ BİLEŞENİ */}
+      <Visualizer 
+          isRecording={isRecording} isPaused={isPaused} duration={duration}
+          metering={metering} selectedFile={selectedFile}
+          playingId={playingId} isPlaying={isPlaying} playSound={playSound}
+          trashScale={trashScale} trashTranslateY={trashTranslateY} trashOpacity={trashOpacity}
+          handleBackPress={handleBackPress}
+          isEditingName={isEditingName} newFileName={newFileName} setNewFileName={setNewFileName}
+          handleSaveRename={handleSaveRename} startRenaming={startRenaming} shareFile={shareFile}
+      />
+
+      {/* 3. CONTROLS COMPONENT */}
+      {/* 3. KONTROLLER BİLEŞENİ */}
+      <Controls 
+          selectedFile={selectedFile} isRecording={isRecording} isPaused={isPaused} isProcessing={isProcessing}
+          pickFile={pickFile} saveRecordingToDevice={saveRecordingToDevice} handleProcessPress={handleProcessPress}
+          handleTrashPress={handleTrashPress} resumeRecording={resumeRecording} pauseRecording={pauseRecording}
+          stopRecording={stopRecording} handleRecordPress={handleRecordPress}
+      />
+
+      {/* 4. MENUS & MODALS (Kept in App.js for global overlay) */}
+      {/* 4. MENÜLER & MODALLAR (Global katman için App.js'de tutuldu) */}
       <Modal visible={isMenuVisible} transparent={true} animationType="fade" onRequestClose={() => setIsMenuVisible(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsMenuVisible(false)}>
               <View style={styles.menuContainer}>
-                  {/* DYNAMIC TITLE */}
-                  {/* DİNAMİK BAŞLIK */}
                   <Text style={styles.menuTitle}>{t('menu')}</Text>
                   
-                  {/* Records Button */}
-                  {/* Kayıtlar Butonu */}
                   <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuVisible(false); setTimeout(() => setIsRecordsVisible(true), 300); }}>
                       <MaterialIcons name="library-music" size={24} color="#4A90E2" />
-                      {/* TRANSLATED TEXT */}
-                      {/* ÇEVRİLMİŞ METİN */}
                       <Text style={styles.menuItemText}>{t('saved_recordings')}</Text>
                   </TouchableOpacity>
 
-                  {/* Settings Button - ADDED */}
-                  {/* Ayarlar Butonu - EKLENDİ */}
-                  <TouchableOpacity 
-                    style={styles.menuItem} 
-                    onPress={() => { 
-                        setIsMenuVisible(false); 
-                        setTimeout(() => setIsSettingsVisible(true), 300); 
-                    }}
-                  >
-                      <Ionicons name="settings-outline" size={24} color="#777" />
-                      {/* TRANSLATED TEXT */}
-                      {/* ÇEVRİLMİŞ METİN */}
+                  <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuVisible(false); setTimeout(() => setIsSettingsVisible(true), 300); }}>
+                      <Ionicons name="settings-outline" size={24} color="#FFF" />
                       <Text style={styles.menuItemText}>{t('settings')}</Text>
                   </TouchableOpacity>
               </View>
           </TouchableOpacity>
       </Modal>
 
-      {/* RECORDS MODAL */}
-      {/* KAYITLAR MODALI */}
       <RecordsModal 
-        visible={isRecordsVisible}
-        onClose={() => { stopSound(); setIsRecordsVisible(false); }}
-        recordings={savedRecordings}
-        // Fix: Close list when file selected so screen is visible
-        // Düzeltme: Dosya seçilince listeyi kapatıyoruz ki ekran görünsün
-        onLoad={(item) => {
-            loadFromLibrary(item);
-            setIsRecordsVisible(false);
-        }}
-        onDelete={deleteRecording}
-        onPlay={playSound}
-        onShare={shareFileUri} 
-        onRename={handleListRename} // Keeps the Rename functionality / Yeniden adlandırma işlevini korur
-        playingId={playingId}
-        isPlaying={isPlaying}
+        visible={isRecordsVisible} onClose={() => { stopSound(); setIsRecordsVisible(false); }}
+        recordings={savedRecordings} onLoad={loadFromLibrary} onDelete={deleteRecording}
+        onPlay={playSound} onShare={shareFileUri} onRename={handleListRename}
+        playingId={playingId} isPlaying={isPlaying}
       />
 
-      {/* ANALYSIS RESULT MODAL */}
-      {/* ANALİZ SONUÇ MODALI */}
-      <AnalysisModal 
-        visible={isAnalysisVisible} 
-        onClose={() => setIsAnalysisVisible(false)} 
-      />
+      <AnalysisModal visible={isAnalysisVisible} onClose={() => setIsAnalysisVisible(false)} />
+      <SettingsModal visible={isSettingsVisible} onClose={() => setIsSettingsVisible(false)} />
 
-      {/* SETTINGS MODAL - ADDED */}
-      {/* AYARLAR MODALI - EKLENDİ */}
-      <SettingsModal 
-        visible={isSettingsVisible} 
-        onClose={() => setIsSettingsVisible(false)} 
-      />
-
-      {/* 4. VISUALIZER AREA */}
-      {/* 4. GÖRSELLEŞTİRİCİ ALANI */}
-      <View style={styles.waveContainer}>
-        {/* CASE A: RECORDING */}
-        {/* DURUM A: KAYIT */}
-        {isRecording || isPaused ? (
-             <Animated.View 
-                style={[
-                    styles.activeRecordingContainer,
-                    {
-                        transform: [{ scale: trashScale }, { translateY: trashTranslateY }],
-                        opacity: trashOpacity
-                    }
-                ]}
-             >
-                 <Text style={styles.timerText}>{duration}</Text>
-                 <View style={{ height: 60, width: '100%' }}>
-                     <ScrollView 
-                        ref={scrollViewRef} 
-                        horizontal 
-                        showsHorizontalScrollIndicator={false} 
-                        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-                        contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 10 }}
-                     >
-                        {metering.map((db, index) => (
-                            <PlaybackWaveBar key={index} height={normalizeWave(db)} isPlaying={!isPaused} />
-                        ))}
-                     </ScrollView>
-                 </View>
-             </Animated.View>
-        ) 
-        /* CASE B: PREVIEW */
-        /* DURUM B: ÖNİZLEME */
-        : selectedFile ? (
-            <View style={styles.filePreviewCard}>
-                <TouchableOpacity onPress={handleBackPress} style={styles.backButton}><Ionicons name="arrow-back" size={24} color="#A0A0A0" /></TouchableOpacity>
-                <TouchableOpacity onPress={handleBackPress} style={styles.closeButton}><Ionicons name="close" size={20} color="#FF4B4B" /></TouchableOpacity>
-                
-                <View style={styles.previewContent}>
-                    <TouchableOpacity style={styles.iconContainer} onPress={() => playSound(selectedFile.uri, 'preview')}>
-                         <FontAwesome5 name={(playingId === 'preview' && isPlaying) ? "pause" : "play"} size={24} color="#FF4B4B" />
-                    </TouchableOpacity>
-
-                    <View style={styles.fileInfo}>
-                        <View style={styles.fileNameContainer}>
-                            {isEditingName ? (
-                                <TextInput 
-                                    style={styles.renameInput} value={newFileName} onChangeText={setNewFileName}
-                                    autoFocus={true} onBlur={handleSaveRename} onSubmitEditing={handleSaveRename} returnKeyType="done"
-                                />
-                            ) : (
-                                <TouchableOpacity onPress={startRenaming} style={{flexDirection:'row', alignItems:'center'}}>
-                                    <Text style={styles.fileName} numberOfLines={1}>{selectedFile.name}</Text>
-                                    <Feather name="edit-2" size={14} color="#777" style={styles.editIcon} />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                        {/* TRANSLATED: Status */}
-                        {/* ÇEVRİLDİ: Durum */}
-                        <Text style={styles.fileStatus}>{(playingId === 'preview' && isPlaying) ? t('processing') : t('alert_ready')}</Text>
-                        
-                        {metering.length > 0 && (
-                            <View style={styles.miniWaveformContainer}>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }}>
-                                    {metering.map((db, index) => (
-                                        <PlaybackWaveBar key={index} height={normalizeWave(db) * 0.8} isPlaying={playingId === 'preview' && isPlaying} />
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        )}
-                    </View>
-                    <TouchableOpacity onPress={shareFile} style={styles.shareBtn}><Entypo name="share" size={22} color="#A0A0A0" /></TouchableOpacity>
-                </View>
-            </View>
-        ) 
-        /* CASE C: IDLE */
-        /* DURUM C: BOŞTA */
-        : (
-            <View style={styles.idleWaveContainer}>
-                {[...Array(5)].map((_, index) => (<AnimatedWaveBar key={index} />))}
-            </View>
-        )}
-      </View>
-
-      {/* 5. CONTROLS */}
-      {/* 5. KONTROLLER */}
-      <View style={styles.controlsContainer}>
-        {!selectedFile && !isRecording && !isPaused ? (
-            <TouchableOpacity style={styles.uploadButton} onPress={pickFile}>
-                <FontAwesome5 name="cloud-upload-alt" size={24} color="#A0A0A0" />
-                {/* FIXED HERE: Using 'select_audio' instead of 'tap_to_record' */}
-                {/* BURADA DÜZELTİLDİ: 'tap_to_record' yerine 'select_audio' kullanılıyor */}
-                <Text style={styles.uploadText}>{t('select_audio')}</Text>
-            </TouchableOpacity>
-        ) : null}
-        
-        {selectedFile && !isRecording && (
-            <View style={{flexDirection: 'row', gap: 10}}>
-                <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#333'}]} onPress={saveRecordingToDevice}>
-                    <FontAwesome5 name="save" size={20} color="#A0A0A0" />
-                    {/* TRANSLATED */}
-                    <Text style={[styles.uploadText, {marginLeft: 8}]}>{t('save')}</Text>
-                </TouchableOpacity>
-
-                {/* PROCESS BUTTON */}
-                {/* İŞLEME BUTONU */}
-                <TouchableOpacity 
-                    style={[styles.actionButton, styles.sendButton, isProcessing && {opacity: 0.7}]} 
-                    onPress={handleProcessPress}
-                    disabled={isProcessing}
-                >
-                    {isProcessing ? (
-                        <ActivityIndicator color="#FFF" size="small" />
-                    ) : (
-                        <FontAwesome5 name="paper-plane" size={20} color="white" />
-                    )}
-                    {/* TRANSLATED */}
-                    <Text style={[styles.uploadText, {color: 'white', marginLeft: 8}]}>
-                        {isProcessing ? t('processing') : t('process')}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-        )}
-
-        {/* RECORDING STATE CONTROLS */}
-        {/* KAYIT DURUMU KONTROLLERİ */}
-        {(isRecording || isPaused) ? (
-            <View style={styles.recordingControls}>
-                {/* TRASH (LEFT) */}
-                {/* ÇÖP KUTUSU (SOL) */}
-                <TouchableOpacity style={styles.smallControlBtn} onPress={handleTrashPress}>
-                    <Ionicons name="trash-outline" size={24} color="#FF4B4B" />
-                </TouchableOpacity>
-
-                {/* PAUSE/RESUME */}
-                {/* DURAKLAT/DEVAM ET */}
-                <TouchableOpacity style={[styles.smallControlBtn, {width: 60, height: 60, borderRadius: 30, backgroundColor: '#4A90E2', borderColor: '#4A90E2'}]} 
-                    onPress={isPaused ? resumeRecording : pauseRecording}>
-                    <FontAwesome5 name={isPaused ? "play" : "pause"} size={24} color="white" />
-                </TouchableOpacity>
-
-                {/* STOP (MAIN) */}
-                {/* DURDUR (ANA) */}
-                <TouchableOpacity onPress={stopRecording}>
-                    <PulsingGlowButton onPress={stopRecording} isRecording={true} />
-                </TouchableOpacity>
-            </View>
-        ) : !selectedFile ? (
-            // IDLE RECORD BUTTON
-            // BOŞTA KAYIT BUTONU
-            <>
-                <PulsingGlowButton onPress={handleRecordPress} isRecording={false} />
-                {/* TRANSLATED */}
-                <Text style={styles.recordLabel}>{t('tap_to_record')}</Text>
-            </>
-        ) : null}
-      </View>
     </SafeAreaView>
   );
 }
