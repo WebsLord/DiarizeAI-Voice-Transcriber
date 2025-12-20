@@ -1,6 +1,3 @@
-// This is our api caller
-// Api çağrıcımız
-import { apiService } from './src/services/api';
 // Fix for encryption random number generation (Must be at the top)
 // Şifreleme için rastgele sayı üretimi düzeltmesi (En üstte olmalı)
 import 'react-native-get-random-values';
@@ -14,14 +11,15 @@ import { MaterialIcons, FontAwesome5, Ionicons, Entypo, Feather } from '@expo/ve
 // --- ÖZEL MODÜLLER (DOĞRU DOSYA YOLLARI) ---
 import styles from './src/styles/AppStyles';       
 import { useAudioLogic } from './src/hooks/useAudioLogic'; 
+// API Service for backend communication
+// Backend iletişimi için API Servisi
+import { apiService } from './src/services/api';
 
 // --- COMPONENTS ---
 // --- BİLEŞENLER ---
 import { PulsingGlowButton } from './src/components/PulsingButton';
 import { PlaybackWaveBar, AnimatedWaveBar } from './src/components/WaveBars'; 
 import { RecordsModal } from './src/components/RecordsModal';
-// NEW COMPONENT: Analysis Result Screen
-// YENİ BİLEŞEN: Analiz Sonuç Ekranı
 import { AnalysisModal } from './src/components/AnalysisModal';
 
 export default function App() {
@@ -136,6 +134,23 @@ export default function App() {
       setIsEditingName(true);
   };
 
+  // NEW: Handle rename from the modal list
+  // YENİ: Modal listesinden yeniden adlandırmayı yönet
+  const handleListRename = (item) => {
+      // 1. Load the selected file
+      // 1. Seçilen dosyayı yükle
+      loadFromLibrary(item);
+      
+      // 2. Close the modal
+      // 2. Modalı kapat
+      setIsRecordsVisible(false);
+      
+      // 3. Setup renaming state to trigger input immediately
+      // 3. Girdiyi hemen tetiklemek için yeniden adlandırma durumunu ayarla
+      setNewFileName(item.name.replace('.m4a', ''));
+      setIsEditingName(true);
+  };
+
   const normalizeWave = (db) => {
       // Set height for scale
       // Ölçeklendirme için yüksekliği ayarla
@@ -195,6 +210,7 @@ export default function App() {
         onDelete={deleteRecording}
         onPlay={playSound}
         onShare={shareFileUri} 
+        onRename={handleListRename} // <-- MISSING PROP ADDED HERE / EKSİK PROP BURAYA EKLENDİ
         playingId={playingId}
         isPlaying={isPlaying}
       />
@@ -305,8 +321,8 @@ export default function App() {
                     <Text style={[styles.uploadText, {marginLeft: 8}]}>Save</Text>
                 </TouchableOpacity>
 
-                {/* PROCESS BUTTON UPDATED: Loading state and new function added */}
-                {/* PROCESS BUTONU GÜNCELLENDİ: Loading durumu ve yeni fonksiyon eklendi */}
+                {/* PROCESS BUTTON */}
+                {/* İŞLEME BUTONU */}
                 <TouchableOpacity 
                     style={[styles.actionButton, styles.sendButton, isProcessing && {opacity: 0.7}]} 
                     onPress={handleProcessPress}
