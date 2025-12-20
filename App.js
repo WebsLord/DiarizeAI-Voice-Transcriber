@@ -13,6 +13,7 @@ import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next'; 
 
 // --- CUSTOM MODULES ---
+// --- ÖZEL MODÜLLER ---
 import styles from './src/styles/AppStyles';       
 import { useAudioLogic } from './src/hooks/useAudioLogic'; 
 
@@ -23,6 +24,7 @@ import { Visualizer } from './src/components/dashboard/Visualizer';
 import { Controls } from './src/components/dashboard/Controls';
 
 // --- MODALS ---
+// --- MODALLAR ---
 import { RecordsModal } from './src/components/RecordsModal';
 import { AnalysisModal } from './src/components/AnalysisModal';
 import { SettingsModal } from './src/components/SettingsModal';
@@ -37,11 +39,12 @@ export default function App() {
       selectedFile, isRecording, isPaused, duration, metering,
       isPlaying, playingId, savedRecordings,
       startRecording, stopRecording, pauseRecording, resumeRecording, discardRecording,
-      playSound, stopSound, saveRecordingToDevice, deleteRecording, 
+      playSound, stopSound, saveRecordingToDevice, deleteRecording, clearAllRecordings, // Added here / Buraya eklendi
       pickFile, loadFromLibrary, clearSelection, shareFile, shareFileUri, renameRecording
   } = useAudioLogic();
 
   // UI States
+  // Arayüz Durumları
   const [isMenuVisible, setIsMenuVisible] = useState(false); 
   const [isRecordsVisible, setIsRecordsVisible] = useState(false); 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
@@ -49,15 +52,18 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Rename States
+  // Yeniden Adlandırma Durumları
   const [isEditingName, setIsEditingName] = useState(false);
   const [newFileName, setNewFileName] = useState("");
 
   // Animation Values
+  // Animasyon Değerleri
   const trashScale = useRef(new Animated.Value(1)).current;
   const trashTranslateY = useRef(new Animated.Value(0)).current;
   const trashOpacity = useRef(new Animated.Value(1)).current;
 
   // --- HANDLERS ---
+  // --- İŞLEYİCİLER ---
   
   const handleRecordPress = () => { startRecording(); }; 
   
@@ -67,12 +73,15 @@ export default function App() {
     try {
         console.log("Attempting to upload to backend...");
         // Simulation error for demo
+        // Demo için simülasyon hatası
         throw new Error("Backend not ready yet"); 
     } catch (error) {
         console.log("Backend unavailable:", error.message);
         setTimeout(() => {
             setIsProcessing(false);
             setIsAnalysisVisible(true); 
+            // Alert translation
+            // Uyarı çevirisi
             Alert.alert(t('alert_simulation'), t('alert_backend_down'));
         }, 2000);
     }
@@ -150,8 +159,8 @@ export default function App() {
           stopRecording={stopRecording} handleRecordPress={handleRecordPress}
       />
 
-      {/* 4. MENUS & MODALS (Kept in App.js for global overlay) */}
-      {/* 4. MENÜLER & MODALLAR (Global katman için App.js'de tutuldu) */}
+      {/* 4. MENUS & MODALS */}
+      {/* 4. MENÜLER & MODALLAR */}
       <Modal visible={isMenuVisible} transparent={true} animationType="fade" onRequestClose={() => setIsMenuVisible(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsMenuVisible(false)}>
               <View style={styles.menuContainer}>
@@ -178,7 +187,19 @@ export default function App() {
       />
 
       <AnalysisModal visible={isAnalysisVisible} onClose={() => setIsAnalysisVisible(false)} />
-      <SettingsModal visible={isSettingsVisible} onClose={() => setIsSettingsVisible(false)} />
+      
+      {/* UPDATED SETTINGS MODAL */}
+      {/* GÜNCELLENMİŞ AYARLAR MODALI */}
+      <SettingsModal 
+        visible={isSettingsVisible} 
+        onClose={() => setIsSettingsVisible(false)}
+        recordings={savedRecordings} // Pass the list / Listeyi gönder
+        recordCount={savedRecordings.length}
+        onClearAll={() => {
+            clearAllRecordings();
+            setIsSettingsVisible(false);
+        }}
+      />
 
     </SafeAreaView>
   );

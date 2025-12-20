@@ -5,11 +5,12 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sharing from 'expo-sharing';
-// Şifreleme kütüphanesini ekledik
+// Import Encryption Library
+// Şifreleme Kütüphanesini İçe Aktar
 import CryptoJS from 'crypto-js';
 
-// GÜVENLİK ANAHTARI: Bunu ileride .env dosyasına taşıyabiliriz.
-// Şimdilik buradaki karmaşık metin senin kasanın anahtarı.
+// SECRET KEY (Should be in .env in production)
+// GİZLİ ANAHTAR (Üretim aşamasında .env dosyasında olmalı)
 const SECRET_KEY = "DiarizeAI-Secure-Key-v1-ChangeThisInProduction";
 
 export const useAudioLogic = () => {
@@ -31,13 +32,12 @@ export const useAudioLogic = () => {
         return () => { if (sound) sound.unloadAsync(); };
     }, []);
 
-    // --- YARDIMCI FONKSİYONLAR (ŞİFRELEME) ---
+    // --- HELPER FUNCTIONS ---
+    // --- YARDIMCI FONKSİYONLAR ---
 
-    // Veriyi şifreleyip kaydet
     const saveSecurely = async (data) => {
         try {
             const jsonString = JSON.stringify(data);
-            // AES ile şifrele
             const encrypted = CryptoJS.AES.encrypt(jsonString, SECRET_KEY).toString();
             await AsyncStorage.setItem('@my_recordings', encrypted);
         } catch (e) {
@@ -45,7 +45,8 @@ export const useAudioLogic = () => {
         }
     };
 
-    // --- Kayıt Fonksiyonları ---
+    // --- RECORDING FUNCTIONS ---
+    // --- KAYIT FONKSİYONLARI ---
 
     const startRecording = async () => {
         try {
@@ -104,24 +105,21 @@ export const useAudioLogic = () => {
         setDuration("00:00");
     };
 
-    // --- Dosya İşlemleri ---
+    // --- FILE OPERATIONS ---
+    // --- DOSYA İŞLEMLERİ ---
 
     const loadRecordings = async () => {
         try {
             const storedValue = await AsyncStorage.getItem('@my_recordings');
             if (storedValue != null) {
                 try {
-                    // 1. Önce şifreli veriyi çözmeyi dene
                     const bytes = CryptoJS.AES.decrypt(storedValue, SECRET_KEY);
                     const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
                     setSavedRecordings(decryptedData);
                 } catch (cryptoError) {
-                    // 2. Eğer şifre çözülemezse (eski veri), normal JSON olarak okumayı dene
-                    // Bu sayede eski verilerin kaybolmaz, ilk kayıtta otomatik şifrelenir.
                     console.log("Migrating unencrypted data...");
                     const plainData = JSON.parse(storedValue);
                     setSavedRecordings(plainData);
-                    // Hemen şifreli olarak geri kaydet (Migration)
                     saveSecurely(plainData);
                 }
             }
@@ -130,14 +128,11 @@ export const useAudioLogic = () => {
 
     const renameRecording = async (newName) => {
         if (!selectedFile) return;
-
-        // Input Validation (Burası önceki adımdan gelen güvenlik önlemi)
         let cleanName = newName.replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
         if (cleanName.length === 0) {
             Alert.alert("Invalid Name", "Please use letters and numbers only.");
             return;
         }
-
         if (!cleanName.endsWith('.m4a')) cleanName += '.m4a';
         
         try {
@@ -148,13 +143,11 @@ export const useAudioLogic = () => {
             await FileSystem.moveAsync({ from: oldUri, to: newUri });
             setSelectedFile(prev => ({ ...prev, name: cleanName, uri: newUri }));
             
-            // Listeyi güncelle (Eski fonksiyonu değiştirdik, artık saveSecurely kullanıyor)
             const updatedList = savedRecordings.map(r => 
                 r.uri === oldUri ? { ...r, name: cleanName, uri: newUri } : r
             );
             setSavedRecordings(updatedList);
-            await saveSecurely(updatedList); // ŞİFRELİ KAYIT
-
+            await saveSecurely(updatedList);
             Alert.alert("Success", "File renamed securely.");
         } catch (error) { Alert.alert("Error", "Could not rename."); }
     };
@@ -180,8 +173,6 @@ export const useAudioLogic = () => {
             
             const updatedList = [newRecord, ...savedRecordings];
             setSavedRecordings(updatedList);
-            
-            // BURAYI GÜNCELLEDİK: Şifreli kayıt
             await saveSecurely(updatedList);
             
             Alert.alert("Success", "Saved (Encrypted) to library!");
@@ -198,11 +189,31 @@ export const useAudioLogic = () => {
             
             const updatedList = savedRecordings.filter(r => r.id !== id);
             setSavedRecordings(updatedList);
-            
-            // BURAYI GÜNCELLEDİK: Şifreli kayıt
             await saveSecurely(updatedList);
-
         } catch (error) { console.error("Delete error:", error); }
+    };
+
+    // --- NEW: DELETE ALL RECORDINGS ---
+    // --- YENİ: TÜM KAYITLARI SİL ---
+    const clearAllRecordings = async () => {
+        try {
+            // 1. Delete actual files
+            // 1. Gerçek dosyaları sil
+            for (const record of savedRecordings) {
+                await FileSystem.deleteAsync(record.uri, { idempotent: true });
+            }
+            // 2. Clear list
+            // 2. Listeyi temizle
+            setSavedRecordings([]);
+            // 3. Clear storage
+            // 3. Hafızayı temizle
+            await saveSecurely([]);
+            
+            return true; 
+        } catch (error) {
+            console.error("Clear all error:", error);
+            return false;
+        }
     };
 
     const playSound = async (uri, id) => {
@@ -260,6 +271,7 @@ export const useAudioLogic = () => {
         selectedFile, isRecording, isPaused, duration, metering, isPlaying, playingId, savedRecordings,
         startRecording, stopRecording, pauseRecording, resumeRecording, discardRecording,
         playSound, stopSound, saveRecordingToDevice, deleteRecording, 
+        clearAllRecordings, // EXPORTED NOW / ŞİMDİ DIŞA AKTARILDI
         pickFile, loadFromLibrary, clearSelection, shareFile, 
         shareFileUri, 
         renameRecording
