@@ -6,34 +6,39 @@ import { useTranslation } from 'react-i18next';
 import styles from '../../styles/AppStyles';
 import { PulsingGlowButton } from '../PulsingButton';
 
+// Added fontScale prop
+// fontScale özelliği eklendi
 export const Controls = ({ 
     selectedFile, isRecording, isPaused, isProcessing,
     pickFile, saveRecordingToDevice, handleProcessPress,
-    handleTrashPress, resumeRecording, pauseRecording, stopRecording, handleRecordPress 
+    handleTrashPress, resumeRecording, pauseRecording, stopRecording, handleRecordPress,
+    fontScale = 1
 }) => {
     
     const { t } = useTranslation();
 
+    // Helper for dynamic font size
+    // Dinamik yazı boyutu için yardımcı
+    const dynamicSize = (size) => ({ fontSize: size * fontScale });
+
     return (
         <View style={styles.controlsContainer}>
-            {/* 1. UPLOAD BUTTON (Only if idle) */}
-            {/* 1. YÜKLEME BUTONU (Sadece boştayken) */}
+            {/* UPLOAD BUTTON */}
+            {/* YÜKLEME BUTONU */}
             {!selectedFile && !isRecording && !isPaused ? (
                 <TouchableOpacity style={styles.uploadButton} onPress={pickFile}>
                     <FontAwesome5 name="cloud-upload-alt" size={24} color="#A0A0A0" />
-                    {/* FIXED: Correct Translation Key */}
-                    {/* DÜZELTİLDİ: Doğru Çeviri Anahtarı */}
-                    <Text style={styles.uploadText}>{t('select_audio')}</Text>
+                    <Text style={[styles.uploadText, dynamicSize(16)]}>{t('select_audio')}</Text>
                 </TouchableOpacity>
             ) : null}
             
-            {/* 2. ACTION BUTTONS (Save & Process) */}
-            {/* 2. İŞLEM BUTONLARI (Kaydet & İşle) */}
+            {/* ACTION BUTTONS */}
+            {/* İŞLEM BUTONLARI */}
             {selectedFile && !isRecording && (
                 <View style={{flexDirection: 'row', gap: 10}}>
                     <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#333'}]} onPress={saveRecordingToDevice}>
                         <FontAwesome5 name="save" size={20} color="#A0A0A0" />
-                        <Text style={[styles.uploadText, {marginLeft: 8}]}>{t('save')}</Text>
+                        <Text style={[styles.uploadText, {marginLeft: 8}, dynamicSize(16)]}>{t('save')}</Text>
                     </TouchableOpacity>
     
                     <TouchableOpacity 
@@ -46,15 +51,15 @@ export const Controls = ({
                         ) : (
                             <FontAwesome5 name="paper-plane" size={20} color="white" />
                         )}
-                        <Text style={[styles.uploadText, {color: 'white', marginLeft: 8}]}>
+                        <Text style={[styles.uploadText, {color: 'white', marginLeft: 8}, dynamicSize(16)]}>
                             {isProcessing ? t('processing') : t('process')}
                         </Text>
                     </TouchableOpacity>
                 </View>
             )}
     
-            {/* 3. RECORDING CONTROLS */}
-            {/* 3. KAYIT KONTROLLERİ */}
+            {/* RECORDING CONTROLS */}
+            {/* KAYIT KONTROLLERİ */}
             {(isRecording || isPaused) ? (
                 <View style={styles.recordingControls}>
                     <TouchableOpacity style={styles.smallControlBtn} onPress={handleTrashPress}>
@@ -73,7 +78,7 @@ export const Controls = ({
             ) : !selectedFile ? (
                 <>
                     <PulsingGlowButton onPress={handleRecordPress} isRecording={false} />
-                    <Text style={styles.recordLabel}>{t('tap_to_record')}</Text>
+                    <Text style={[styles.recordLabel, dynamicSize(14)]}>{t('tap_to_record')}</Text>
                 </>
             ) : null}
         </View>

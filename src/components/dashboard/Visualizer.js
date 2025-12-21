@@ -6,18 +6,18 @@ import { useTranslation } from 'react-i18next';
 import styles from '../../styles/AppStyles';
 import { PlaybackWaveBar, AnimatedWaveBar } from '../WaveBars';
 
+// Added fontScale prop
+// fontScale özelliği eklendi
 export const Visualizer = ({ 
     isRecording, isPaused, duration, metering, selectedFile, 
     playingId, isPlaying, playSound, trashScale, trashTranslateY, trashOpacity,
     handleBackPress, isEditingName, newFileName, setNewFileName, 
-    handleSaveRename, startRenaming, shareFile 
+    handleSaveRename, startRenaming, shareFile, fontScale = 1
 }) => {
     
     const { t } = useTranslation();
     const scrollViewRef = useRef();
 
-    // Helper for wave height calculation
-    // Dalga yüksekliği hesaplaması için yardımcı
     const normalizeWave = (db) => {
         const minDb = -80; const maxHeight = 35; 
         if (db < minDb) return 5; 
@@ -25,10 +25,14 @@ export const Visualizer = ({
         return Math.max(5, height);
     };
 
+    // Helper for dynamic font size
+    // Dinamik yazı boyutu için yardımcı
+    const dynamicSize = (size) => ({ fontSize: size * fontScale });
+
     return (
         <View style={styles.waveContainer}>
-            {/* CASE A: RECORDING ACTIVE */}
-            {/* DURUM A: KAYIT AKTİF */}
+            {/* RECORDING ACTIVE */}
+            {/* KAYIT AKTİF */}
             {isRecording || isPaused ? (
                  <Animated.View 
                     style={[
@@ -39,7 +43,7 @@ export const Visualizer = ({
                         }
                     ]}
                  >
-                     <Text style={styles.timerText}>{duration}</Text>
+                     <Text style={[styles.timerText, dynamicSize(18)]}>{duration}</Text>
                      <View style={{ height: 60, width: '100%' }}>
                          <ScrollView 
                             ref={scrollViewRef} 
@@ -55,8 +59,8 @@ export const Visualizer = ({
                      </View>
                  </Animated.View>
             ) 
-            /* CASE B: FILE PREVIEW */
-            /* DURUM B: DOSYA ÖNİZLEME */
+            /* FILE PREVIEW */
+            /* DOSYA ÖNİZLEME */
             : selectedFile ? (
                 <View style={styles.filePreviewCard}>
                     <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
@@ -75,19 +79,17 @@ export const Visualizer = ({
                             <View style={styles.fileNameContainer}>
                                 {isEditingName ? (
                                     <TextInput 
-                                        style={styles.renameInput} value={newFileName} onChangeText={setNewFileName}
+                                        style={[styles.renameInput, dynamicSize(16)]} value={newFileName} onChangeText={setNewFileName}
                                         autoFocus={true} onBlur={handleSaveRename} onSubmitEditing={handleSaveRename} returnKeyType="done"
                                     />
                                 ) : (
                                     <TouchableOpacity onPress={startRenaming} style={{flexDirection:'row', alignItems:'center'}}>
-                                        <Text style={styles.fileName} numberOfLines={1}>{selectedFile.name}</Text>
+                                        <Text style={[styles.fileName, dynamicSize(16)]} numberOfLines={1}>{selectedFile.name}</Text>
                                         <Feather name="edit-2" size={14} color="#777" style={styles.editIcon} />
                                     </TouchableOpacity>
                                 )}
                             </View>
-                            {/* STATUS TEXT TRANSLATED */}
-                            {/* DURUM METNİ ÇEVRİLDİ */}
-                            <Text style={styles.fileStatus}>{(playingId === 'preview' && isPlaying) ? t('processing') : t('alert_ready')}</Text>
+                            <Text style={[styles.fileStatus, dynamicSize(12)]}>{(playingId === 'preview' && isPlaying) ? t('processing') : t('alert_ready')}</Text>
                             
                             {metering.length > 0 && (
                                 <View style={styles.miniWaveformContainer}>
@@ -105,8 +107,8 @@ export const Visualizer = ({
                     </View>
                 </View>
             ) 
-            /* CASE C: IDLE STATE */
-            /* DURUM C: BOŞTA DURUMU */
+            /* IDLE STATE */
+            /* BOŞTA DURUMU */
             : (
                 <View style={styles.idleWaveContainer}>
                     {[...Array(5)].map((_, index) => (<AnimatedWaveBar key={index} />))}

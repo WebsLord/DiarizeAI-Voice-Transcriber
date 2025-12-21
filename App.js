@@ -13,18 +13,18 @@ import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next'; 
 
 // --- CUSTOM MODULES ---
-// --- ÖZEL MODÜLLER ---
 import styles from './src/styles/AppStyles';       
 import { useAudioLogic } from './src/hooks/useAudioLogic'; 
+// Import Theme Hook
+// Tema Kancasını İçe Aktar
+import { useTheme } from './src/hooks/useTheme'; 
 
 // --- SUB-COMPONENTS (Refactored) ---
-// --- ALT BİLEŞENLER (Yeniden Düzenlendi) ---
 import { Header } from './src/components/dashboard/Header';
 import { Visualizer } from './src/components/dashboard/Visualizer';
 import { Controls } from './src/components/dashboard/Controls';
 
 // --- MODALS ---
-// --- MODALLAR ---
 import { RecordsModal } from './src/components/RecordsModal';
 import { AnalysisModal } from './src/components/AnalysisModal';
 import { SettingsModal } from './src/components/SettingsModal';
@@ -32,19 +32,20 @@ import { SettingsModal } from './src/components/SettingsModal';
 export default function App() {
   
   const { t } = useTranslation();
+  
+  // Use Theme Hook
+  // Tema Kancasını Kullan
+  const { fontScale, changeFontScale } = useTheme();
 
-  // Audio Logic Hook
-  // Ses Mantığı Kancası
   const {
       selectedFile, isRecording, isPaused, duration, metering,
       isPlaying, playingId, savedRecordings,
       startRecording, stopRecording, pauseRecording, resumeRecording, discardRecording,
-      playSound, stopSound, saveRecordingToDevice, deleteRecording, clearAllRecordings, // Added here / Buraya eklendi
+      playSound, stopSound, saveRecordingToDevice, deleteRecording, clearAllRecordings,
       pickFile, loadFromLibrary, clearSelection, shareFile, shareFileUri, renameRecording
   } = useAudioLogic();
 
   // UI States
-  // Arayüz Durumları
   const [isMenuVisible, setIsMenuVisible] = useState(false); 
   const [isRecordsVisible, setIsRecordsVisible] = useState(false); 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
@@ -52,18 +53,15 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Rename States
-  // Yeniden Adlandırma Durumları
   const [isEditingName, setIsEditingName] = useState(false);
   const [newFileName, setNewFileName] = useState("");
 
   // Animation Values
-  // Animasyon Değerleri
   const trashScale = useRef(new Animated.Value(1)).current;
   const trashTranslateY = useRef(new Animated.Value(0)).current;
   const trashOpacity = useRef(new Animated.Value(1)).current;
 
   // --- HANDLERS ---
-  // --- İŞLEYİCİLER ---
   
   const handleRecordPress = () => { startRecording(); }; 
   
@@ -72,16 +70,11 @@ export default function App() {
     setIsProcessing(true);
     try {
         console.log("Attempting to upload to backend...");
-        // Simulation error for demo
-        // Demo için simülasyon hatası
         throw new Error("Backend not ready yet"); 
     } catch (error) {
-        console.log("Backend unavailable:", error.message);
         setTimeout(() => {
             setIsProcessing(false);
             setIsAnalysisVisible(true); 
-            // Alert translation
-            // Uyarı çevirisi
             Alert.alert(t('alert_simulation'), t('alert_backend_down'));
         }, 2000);
     }
@@ -124,6 +117,8 @@ export default function App() {
   };
 
   const handleListRename = (item) => {
+      // Load file, close modal, and start renaming
+      // Dosyayı yükle, modalı kapat ve yeniden adlandırmayı başlat
       loadFromLibrary(item);
       setIsRecordsVisible(false);
       setNewFileName(item.name.replace('.m4a', ''));
@@ -134,12 +129,10 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* 1. HEADER COMPONENT */}
-      {/* 1. BAŞLIK BİLEŞENİ */}
-      <Header onMenuPress={() => setIsMenuVisible(true)} />
+      {/* 1. HEADER */}
+      <Header onMenuPress={() => setIsMenuVisible(true)} fontScale={fontScale} />
 
-      {/* 2. VISUALIZER COMPONENT */}
-      {/* 2. GÖRSELLEŞTİRİCİ BİLEŞENİ */}
+      {/* 2. VISUALIZER */}
       <Visualizer 
           isRecording={isRecording} isPaused={isPaused} duration={duration}
           metering={metering} selectedFile={selectedFile}
@@ -148,22 +141,23 @@ export default function App() {
           handleBackPress={handleBackPress}
           isEditingName={isEditingName} newFileName={newFileName} setNewFileName={setNewFileName}
           handleSaveRename={handleSaveRename} startRenaming={startRenaming} shareFile={shareFile}
+          fontScale={fontScale}
       />
 
-      {/* 3. CONTROLS COMPONENT */}
-      {/* 3. KONTROLLER BİLEŞENİ */}
+      {/* 3. CONTROLS */}
       <Controls 
           selectedFile={selectedFile} isRecording={isRecording} isPaused={isPaused} isProcessing={isProcessing}
           pickFile={pickFile} saveRecordingToDevice={saveRecordingToDevice} handleProcessPress={handleProcessPress}
           handleTrashPress={handleTrashPress} resumeRecording={resumeRecording} pauseRecording={pauseRecording}
           stopRecording={stopRecording} handleRecordPress={handleRecordPress}
+          fontScale={fontScale}
       />
 
       {/* 4. MENUS & MODALS */}
-      {/* 4. MENÜLER & MODALLAR */}
       <Modal visible={isMenuVisible} transparent={true} animationType="fade" onRequestClose={() => setIsMenuVisible(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsMenuVisible(false)}>
               <View style={styles.menuContainer}>
+                  {/* Dynamic text size helpers used in Header/Visualizer are applied here implicitly by styles or can be added */}
                   <Text style={styles.menuTitle}>{t('menu')}</Text>
                   
                   <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuVisible(false); setTimeout(() => setIsRecordsVisible(true), 300); }}>
@@ -180,27 +174,38 @@ export default function App() {
       </Modal>
 
       <RecordsModal 
-        visible={isRecordsVisible} onClose={() => { stopSound(); setIsRecordsVisible(false); }}
-        recordings={savedRecordings} onLoad={loadFromLibrary} onDelete={deleteRecording}
-        onPlay={playSound} onShare={shareFileUri} onRename={handleListRename}
-        playingId={playingId} isPlaying={isPlaying}
+        visible={isRecordsVisible} 
+        onClose={() => { stopSound(); setIsRecordsVisible(false); }}
+        recordings={savedRecordings} 
+        // FIX: Load AND Close Modal
+        // DÜZELTME: Yükle VE Modalı Kapat
+        onLoad={(item) => {
+            loadFromLibrary(item);
+            setIsRecordsVisible(false);
+        }}
+        onDelete={deleteRecording}
+        onPlay={playSound} 
+        onShare={shareFileUri} 
+        onRename={handleListRename}
+        playingId={playingId} 
+        isPlaying={isPlaying}
+        fontScale={fontScale}
       />
 
       <AnalysisModal visible={isAnalysisVisible} onClose={() => setIsAnalysisVisible(false)} />
       
-      {/* UPDATED SETTINGS MODAL */}
-      {/* GÜNCELLENMİŞ AYARLAR MODALI */}
       <SettingsModal 
         visible={isSettingsVisible} 
         onClose={() => setIsSettingsVisible(false)}
-        recordings={savedRecordings} // Pass the list / Listeyi gönder
+        recordings={savedRecordings}
         recordCount={savedRecordings.length}
         onClearAll={() => {
             clearAllRecordings();
             setIsSettingsVisible(false);
         }}
+        fontScale={fontScale}
+        onChangeFontScale={changeFontScale}
       />
-
     </SafeAreaView>
   );
 }
