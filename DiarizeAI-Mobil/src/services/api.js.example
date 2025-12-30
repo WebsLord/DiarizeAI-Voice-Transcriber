@@ -1,0 +1,83 @@
+// src/services/api.js
+
+// BACKEND URL (Change this when deployed)
+// BACKEND ADRESİ (Sunucuya atılınca burayı değiştir)
+// Note: For Android Emulator use 'http://10.0.2.2:8000'
+// Not: Android Emülatör için 'http://10.0.2.2:8000' kullan
+const BASE_URL = 'http://YOUR_LOCAL_IP_ADDRESS:8000/api/v1'; 
+
+export const apiService = {
+    
+    // 1. UPLOAD AUDIO FILE
+    // 1. SES DOSYASINI YÜKLE
+    uploadAudio: async (fileUri) => {
+        const formData = new FormData();
+        const fileName = fileUri.split('/').pop();
+        const fileType = fileName.endsWith('.m4a') ? 'audio/m4a' : 'audio/wav';
+
+        formData.append('file', {
+            uri: fileUri,
+            name: fileName,
+            type: fileType,
+        });
+
+        try {
+            const response = await fetch(`${BASE_URL}/upload`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            const json = await response.json();
+            return json; // Returns { process_id: "..." }
+        } catch (error) {
+            console.error("Upload Error:", error);
+            throw error;
+        }
+    },
+
+    // 2. CHECK PROCESSING STATUS
+    // 2. İŞLEM DURUMUNU KONTROL ET
+    checkStatus: async (processId) => {
+        try {
+            const response = await fetch(`${BASE_URL}/status/${processId}`);
+            const json = await response.json();
+            return json; // Returns { status: "completed", data: { ... } }
+        } catch (error) {
+            console.error("Status Check Error:", error);
+            throw error;
+        }
+    },
+
+    // 3. POLL UNTIL COMPLETE (Helper Function)
+    // 3. TAMAMLANANA KADAR TEKRARLA (Yardımcı Fonksiyon)
+    pollUntilComplete: async (processId, interval = 2000, maxAttempts = 30) => {
+        let attempts = 0;
+        
+        return new Promise((resolve, reject) => {
+            const check = async () => {
+                attempts++;
+                try {
+                    const result = await apiService.checkStatus(processId);
+                    
+                    if (result.status === 'completed') {
+                        resolve(result.data); // Success! / Başarılı!
+                    } else if (result.status === 'failed') {
+                        reject(new Error("Analysis failed on server."));
+                    } else if (attempts >= maxAttempts) {
+                        reject(new Error("Timeout: Processing took too long."));
+                    } else {
+                        // Still processing, wait and try again
+                        // İşlem sürüyor, bekle ve tekrar dene
+                        setTimeout(check, interval);
+                    }
+                } catch (e) {
+                    reject(e); // Network error / Ağ hatası
+                }
+            };
+            check();
+        });
+    }
+};
