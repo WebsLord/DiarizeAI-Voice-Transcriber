@@ -1,0 +1,39 @@
+# --- Core Agent & AI ---
+# Google ADK (eğer PyPI'da yoksa wheel/manuel kurulum gerekebilir)
+google-adk
+
+# Multi-provider LLM Access (GPT-5.1-mini, OpenRouter vs. için)
+litellm>=1.30.0
+
+# Structured Output (JSON şemaları için)
+pydantic>=2.0.0
+
+
+# --- Audio / Transcription / Diarization ---
+# Not: Bilgisayarında sistem seviyesinde FFmpeg kurulu olmalı (pip ile değil: brew/apt/choco ile).
+torch
+torchaudio
+numpy
+
+# Whisper ile lokal STT
+openai-whisper>=20231117
+
+# Konuşmacı ayrımı (diarization) için
+pyannote.audio==3.1.1
+
+
+# --- Backend & API ---
+# Web Framework
+flask>=3.0.0
+
+# CORS desteği (React Native / web client için)
+flask-cors>=4.0.0
+
+# Database ORM (Flask entegrasyonlu)
+flask-sqlalchemy>=3.0.0
+
+# API Requests (gerekirse dış servislere istek atmak için)
+requests>=2.31.0
+
+# Environment Variables (.env okumak için)
+python-dotenv>=1.0.0
