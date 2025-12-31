@@ -1,3 +1,5 @@
+// src/screens/ResultScreen.js
+
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

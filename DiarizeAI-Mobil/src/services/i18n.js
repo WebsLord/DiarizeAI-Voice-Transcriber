@@ -1,3 +1,5 @@
+// src/services/i18n.js
+
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,6 +9,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const LANGUAGES = [
     { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
     { code: 'en', label: 'English', flag: '🇬🇧' },
+    { code: 'az', label: 'Azərbaycan', flag: '🇦🇿' }, // Azerice added
+    { code: 'fa', label: 'فارسی', flag: '🇮🇷' },      // Farsça added
     { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
     { code: 'fr', label: 'Français', flag: '🇫🇷' },
     { code: 'es', label: 'Español', flag: '🇪🇸' },
@@ -67,7 +71,22 @@ const resources = {
             alert_sending: "Sending to API...",
             btn_cancel: "Cancel",
             btn_delete: "Delete",
-            btn_yes: "Yes, Delete"
+            btn_yes: "Yes, Delete",
+            
+            // AUTH (Giriş/Kayıt)
+            login_title: "Diarize AI Login",
+            register_title: "Sign Up",
+            username_placeholder: "Username (Display Name)",
+            email_placeholder: "Email",
+            password_placeholder: "Password",
+            btn_login: "Log In",
+            btn_register: "Sign Up",
+            no_account: "Don't have an account? Sign Up",
+            has_account: "Already have an account? Log In",
+            error_empty: "Please fill all fields.",
+            error_login_fail: "Email or password incorrect.",
+            success_login: "Login Successful!",
+            success_register: "Account created! Please log in."
         }
     },
     // --- TURKISH ---
@@ -112,7 +131,142 @@ const resources = {
             alert_sending: "API'ye gönderiliyor...",
             btn_cancel: "İptal",
             btn_delete: "Sil",
-            btn_yes: "Evet, Sil"
+            btn_yes: "Evet, Sil",
+
+            // AUTH (Giriş/Kayıt)
+            login_title: "Diarize AI Giriş",
+            register_title: "Kayıt Ol",
+            username_placeholder: "Kullanıcı Adı (Görünen İsim)",
+            email_placeholder: "E-posta",
+            password_placeholder: "Şifre",
+            btn_login: "Giriş Yap",
+            btn_register: "Kayıt Ol",
+            no_account: "Hesabın yok mu? Kayıt Ol",
+            has_account: "Zaten hesabın var mı? Giriş Yap",
+            error_empty: "Lütfen tüm alanları doldurunuz.",
+            error_login_fail: "E-posta veya şifre hatalı.",
+            success_login: "Giriş Başarılı!",
+            success_register: "Hesap oluşturuldu! Giriş yapabilirsiniz."
+        }
+    },
+    // --- AZERBAIJANI (AZ) ---
+    az: {
+        translation: {
+            app_title: "Diarize AI",
+            app_subtitle: "Canlı səs indi mətnə çevrilir",
+            menu: "Menyu",
+            saved_recordings: "Yadda saxlanılanlar",
+            settings: "Tənzimləmələr",
+            process: "Emal et",
+            processing: "Emal edilir...",
+            save: "Yadda saxla",
+            tap_to_record: "Yazmaq üçün toxun",
+            select_audio: "Səs faylı seç",
+            language: "Dil",
+            storage: "Yaddaş",
+            manage_recordings: "Yazıları idarə et",
+            about: "Haqqında",
+            version: "Versiya 1.0.0",
+            close: "Bağla",
+            no_recordings: "Yazı tapılmadı.",
+            total_files: "Ümumi fayllar",
+            file_list: "Fayl siyahısı",
+            clear_all: "Bütün məlumatları sil",
+            clear_all_confirm: "Əminsiniz? BÜTÜN yazılar silinəcək.",
+            developer: "Hazırlayan",
+            developer_name: "Efe & Ozan",
+            text_size: "Mətn ölçüsü",
+            size_normal: "Normal",
+            size_large: "Böyük",
+            size_huge: "Çox böyük",
+            alert_error: "Xəta",
+            alert_success: "Uğurlu",
+            alert_ready: "Hazır",
+            alert_delete_title: "Yazını sil",
+            alert_delete_msg: "Yazı silinəcək. Əminsiniz?",
+            alert_simulation: "Simulyasiya rejimi",
+            alert_backend_down: "Server əlçatmazdır.",
+            alert_saved: "Kitabxanaya yazıldı!",
+            alert_renamed: "Fayl adı dəyişdirildi.",
+            alert_sending: "API-yə göndərilir...",
+            btn_cancel: "Ləğv et",
+            btn_delete: "Sil",
+            btn_yes: "Bəli, Sil",
+
+            // AUTH
+            login_title: "Diarize AI Giriş",
+            register_title: "Qeydiyyat",
+            username_placeholder: "İstifadəçi adı",
+            email_placeholder: "E-poçt",
+            password_placeholder: "Şifrə",
+            btn_login: "Daxil ol",
+            btn_register: "Qeydiyyatdan keç",
+            no_account: "Hesabınız yoxdur? Qeydiyyat",
+            has_account: "Hesabınız var? Giriş",
+            error_empty: "Zəhmət olmasa bütün xanaları doldurun.",
+            error_login_fail: "E-poçt və ya şifrə səhvdir.",
+            success_login: "Giriş uğurlu!",
+            success_register: "Hesab yaradıldı! Giriş edə bilərsiniz."
+        }
+    },
+    // --- PERSIAN (FA) ---
+    fa: {
+        translation: {
+            app_title: "Diarize AI",
+            app_subtitle: "صدا زنده اکنون به متن تبدیل می‌شود",
+            menu: "منو",
+            saved_recordings: "ضبط‌های ذخیره شده",
+            settings: "تنظیمات",
+            process: "پردازش",
+            processing: "در حال پردازش...",
+            save: "ذخیره",
+            tap_to_record: "برای ضبط ضربه بزنید",
+            select_audio: "انتخاب فایل صوتی",
+            language: "زبان",
+            storage: "حافظه",
+            manage_recordings: "مدیریت ضبط‌ها",
+            about: "درباره",
+            version: "نسخه 1.0.0",
+            close: "بستن",
+            no_recordings: "هیچ ضبطی یافت نشد.",
+            total_files: "کل فایل‌ها",
+            file_list: "لیست فایل‌ها",
+            clear_all: "پاک کردن همه داده‌ها",
+            clear_all_confirm: "آیا مطمئن هستید؟ تمام ضبط‌ها حذف خواهند شد.",
+            developer: "توسعه دهنده",
+            developer_name: "Efe & Ozan",
+            text_size: "اندازه متن",
+            size_normal: "عادی",
+            size_large: "بزرگ",
+            size_huge: "خیلی بزرگ",
+            alert_error: "خطا",
+            alert_success: "موفقیت",
+            alert_ready: "آماده",
+            alert_delete_title: "حذف ضبط",
+            alert_delete_msg: "ضبط حذف خواهد شد. مطمئن هستید؟",
+            alert_simulation: "حالت شبیه‌سازی",
+            alert_backend_down: "سرور در دسترس نیست.",
+            alert_saved: "در کتابخانه ذخیره شد!",
+            alert_renamed: "نام فایل تغییر کرد.",
+            alert_sending: "ارسال به API...",
+            btn_cancel: "لغو",
+            btn_delete: "حذف",
+            btn_yes: "بله، حذف کن",
+
+            // AUTH
+            login_title: "ورود Diarize AI",
+            register_title: "ثبت نام",
+            username_placeholder: "نام کاربری",
+            email_placeholder: "ایمیل",
+            password_placeholder: "رمز عبور",
+            btn_login: "ورود",
+            btn_register: "ثبت نام",
+            no_account: "حساب ندارید؟ ثبت نام کنید",
+            has_account: "حساب دارید؟ وارد شوید",
+            error_empty: "لطفا تمام فیلدها را پر کنید.",
+            error_login_fail: "ایمیل یا رمز عبور اشتباه است.",
+            success_login: "ورود موفقیت‌آمیز بود!",
+            success_register: "حساب ایجاد شد! وارد شوید."
         }
     },
     // --- GERMAN (DE) ---
@@ -157,7 +311,22 @@ const resources = {
             alert_sending: "Senden...",
             btn_cancel: "Abbrechen",
             btn_delete: "Löschen",
-            btn_yes: "Ja"
+            btn_yes: "Ja",
+            
+            // AUTH
+            login_title: "Diarize AI Login",
+            register_title: "Registrieren",
+            username_placeholder: "Benutzername",
+            email_placeholder: "E-Mail",
+            password_placeholder: "Passwort",
+            btn_login: "Anmelden",
+            btn_register: "Registrieren",
+            no_account: "Kein Konto? Registrieren",
+            has_account: "Haben Sie ein Konto? Anmelden",
+            error_empty: "Bitte alle Felder ausfüllen.",
+            error_login_fail: "E-Mail oder Passwort falsch.",
+            success_login: "Anmeldung erfolgreich!",
+            success_register: "Konto erstellt! Bitte anmelden."
         }
     },
     // --- FRENCH (FR) ---
@@ -202,7 +371,22 @@ const resources = {
             alert_sending: "Envoi...",
             btn_cancel: "Annuler",
             btn_delete: "Supprimer",
-            btn_yes: "Oui"
+            btn_yes: "Oui",
+
+            // AUTH
+            login_title: "Connexion",
+            register_title: "S'inscrire",
+            username_placeholder: "Nom d'utilisateur",
+            email_placeholder: "Email",
+            password_placeholder: "Mot de passe",
+            btn_login: "Se connecter",
+            btn_register: "S'inscrire",
+            no_account: "Pas de compte ? S'inscrire",
+            has_account: "Déjà un compte ? Se connecter",
+            error_empty: "Veuillez remplir tous les champs.",
+            error_login_fail: "Email ou mot de passe incorrect.",
+            success_login: "Connexion réussie !",
+            success_register: "Compte créé ! Connectez-vous."
         }
     },
     // --- SPANISH (ES) ---
@@ -247,7 +431,22 @@ const resources = {
             alert_sending: "Enviando...",
             btn_cancel: "Cancelar",
             btn_delete: "Borrar",
-            btn_yes: "Sí"
+            btn_yes: "Sí",
+
+            // AUTH
+            login_title: "Iniciar Sesión",
+            register_title: "Registrarse",
+            username_placeholder: "Nombre de usuario",
+            email_placeholder: "Correo",
+            password_placeholder: "Contraseña",
+            btn_login: "Entrar",
+            btn_register: "Registrarse",
+            no_account: "¿No tienes cuenta? Regístrate",
+            has_account: "¿Ya tienes cuenta? Entra",
+            error_empty: "Rellena todos los campos.",
+            error_login_fail: "Correo o contraseña incorrectos.",
+            success_login: "¡Éxito!",
+            success_register: "¡Cuenta creada!"
         }
     },
     // --- ITALIAN (IT) ---
@@ -292,7 +491,22 @@ const resources = {
             alert_sending: "Invio in corso...",
             btn_cancel: "Annulla",
             btn_delete: "Elimina",
-            btn_yes: "Sì"
+            btn_yes: "Sì",
+
+            // AUTH
+            login_title: "Accedi",
+            register_title: "Registrati",
+            username_placeholder: "Nome utente",
+            email_placeholder: "Email",
+            password_placeholder: "Password",
+            btn_login: "Accedi",
+            btn_register: "Registrati",
+            no_account: "Non hai un account? Registrati",
+            has_account: "Hai già un account? Accedi",
+            error_empty: "Compila tutti i campi.",
+            error_login_fail: "Email o password errati.",
+            success_login: "Accesso riuscito!",
+            success_register: "Account creato!"
         }
     },
     // --- PORTUGUESE (PT) ---
@@ -337,7 +551,22 @@ const resources = {
             alert_sending: "Enviando...",
             btn_cancel: "Cancelar",
             btn_delete: "Excluir",
-            btn_yes: "Sim"
+            btn_yes: "Sim",
+
+            // AUTH
+            login_title: "Entrar",
+            register_title: "Cadastrar",
+            username_placeholder: "Nome de usuário",
+            email_placeholder: "Email",
+            password_placeholder: "Senha",
+            btn_login: "Entrar",
+            btn_register: "Cadastrar",
+            no_account: "Sem conta? Cadastre-se",
+            has_account: "Já tem conta? Entre",
+            error_empty: "Preencha todos os campos.",
+            error_login_fail: "Email ou senha incorretos.",
+            success_login: "Sucesso!",
+            success_register: "Conta criada!"
         }
     },
     // --- RUSSIAN (RU) ---
@@ -382,7 +611,22 @@ const resources = {
             alert_sending: "Отправка...",
             btn_cancel: "Отмена",
             btn_delete: "Удалить",
-            btn_yes: "Да"
+            btn_yes: "Да",
+
+            // AUTH
+            login_title: "Вход",
+            register_title: "Регистрация",
+            username_placeholder: "Имя пользователя",
+            email_placeholder: "Email",
+            password_placeholder: "Пароль",
+            btn_login: "Войти",
+            btn_register: "Регистрация",
+            no_account: "Нет аккаунта? Создать",
+            has_account: "Есть аккаунт? Войти",
+            error_empty: "Заполните все поля.",
+            error_login_fail: "Неверный email или пароль.",
+            success_login: "Успешно!",
+            success_register: "Аккаунт создан!"
         }
     },
     // --- CHINESE (ZH) ---
@@ -427,7 +671,22 @@ const resources = {
             alert_sending: "发送中...",
             btn_cancel: "取消",
             btn_delete: "删除",
-            btn_yes: "是的"
+            btn_yes: "是的",
+            
+            // AUTH
+            login_title: "登录",
+            register_title: "注册",
+            username_placeholder: "用户名",
+            email_placeholder: "邮箱",
+            password_placeholder: "密码",
+            btn_login: "登录",
+            btn_register: "注册",
+            no_account: "没有账号？注册",
+            has_account: "已有账号？登录",
+            error_empty: "请填写所有字段。",
+            error_login_fail: "邮箱或密码错误。",
+            success_login: "登录成功！",
+            success_register: "账号已创建！"
         }
     },
     // --- JAPANESE (JA) ---
@@ -472,7 +731,22 @@ const resources = {
             alert_sending: "送信中...",
             btn_cancel: "キャンセル",
             btn_delete: "削除",
-            btn_yes: "はい"
+            btn_yes: "はい",
+            
+            // AUTH
+            login_title: "ログイン",
+            register_title: "登録",
+            username_placeholder: "ユーザー名",
+            email_placeholder: "メール",
+            password_placeholder: "パスワード",
+            btn_login: "ログイン",
+            btn_register: "登録",
+            no_account: "アカウントをお持ちでないですか？登録",
+            has_account: "アカウントをお持ちですか？ログイン",
+            error_empty: "すべての項目を入力してください。",
+            error_login_fail: "メールまたはパスワードが間違っています。",
+            success_login: "ログイン成功！",
+            success_register: "アカウント作成完了！"
         }
     },
     // --- KOREAN (KO) ---
@@ -517,7 +791,22 @@ const resources = {
             alert_sending: "전송 중...",
             btn_cancel: "취소",
             btn_delete: "삭제",
-            btn_yes: "예"
+            btn_yes: "예",
+            
+            // AUTH
+            login_title: "로그인",
+            register_title: "회원가입",
+            username_placeholder: "사용자 이름",
+            email_placeholder: "이메일",
+            password_placeholder: "비밀번호",
+            btn_login: "로그인",
+            btn_register: "회원가입",
+            no_account: "계정이 없으신가요? 가입하기",
+            has_account: "이미 계정이 있으신가요? 로그인",
+            error_empty: "모든 필드를 채워주세요.",
+            error_login_fail: "이메일 또는 비밀번호가 올바르지 않습니다.",
+            success_login: "로그인 성공!",
+            success_register: "계정이 생성되었습니다!"
         }
     },
     // --- HINDI (HI) ---
@@ -562,7 +851,22 @@ const resources = {
             alert_sending: "भेजा जा रहा है...",
             btn_cancel: "रद्द करें",
             btn_delete: "हटाएं",
-            btn_yes: "हां"
+            btn_yes: "हां",
+            
+            // AUTH
+            login_title: "लॉग इन करें",
+            register_title: "साइन अप करें",
+            username_placeholder: "उपयोगकर्ता नाम",
+            email_placeholder: "ईमेल",
+            password_placeholder: "पासवर्ड",
+            btn_login: "लॉग इन",
+            btn_register: "साइन अप",
+            no_account: "खाता नहीं है? साइन अप करें",
+            has_account: "क्या आपके पास खाता है? लॉग इन करें",
+            error_empty: "कृपया सभी फ़ील्ड भरें।",
+            error_login_fail: "ईमेल या पासवर्ड गलत है।",
+            success_login: "लॉगिन सफल!",
+            success_register: "खाता बनाया गया!"
         }
     },
     // --- ARABIC (AR) ---
@@ -607,7 +911,22 @@ const resources = {
             alert_sending: "جاري الإرسال...",
             btn_cancel: "إلغاء",
             btn_delete: "حذف",
-            btn_yes: "نعم"
+            btn_yes: "نعم",
+
+            // AUTH
+            login_title: "تسجيل الدخول",
+            register_title: "إنشاء حساب",
+            username_placeholder: "اسم المستخدم",
+            email_placeholder: "البريد الإلكتروني",
+            password_placeholder: "كلمة المرور",
+            btn_login: "دخول",
+            btn_register: "تسجيل",
+            no_account: "ليس لديك حساب؟ سجل الآن",
+            has_account: "لديك حساب؟ سجل الدخول",
+            error_empty: "يرجى ملء جميع الحقول.",
+            error_login_fail: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+            success_login: "تم تسجيل الدخول بنجاح!",
+            success_register: "تم إنشاء الحساب!"
         }
     },
     // --- INDONESIAN (ID) ---
@@ -652,7 +971,22 @@ const resources = {
             alert_sending: "Mengirim...",
             btn_cancel: "Batal",
             btn_delete: "Hapus",
-            btn_yes: "Ya"
+            btn_yes: "Ya",
+
+            // AUTH
+            login_title: "Masuk",
+            register_title: "Daftar",
+            username_placeholder: "Nama Pengguna",
+            email_placeholder: "Email",
+            password_placeholder: "Kata Sandi",
+            btn_login: "Masuk",
+            btn_register: "Daftar",
+            no_account: "Belum punya akun? Daftar",
+            has_account: "Sudah punya akun? Masuk",
+            error_empty: "Harap isi semua kolom.",
+            error_login_fail: "Email atau kata sandi salah.",
+            success_login: "Login Berhasil!",
+            success_register: "Akun dibuat!"
         }
     },
     // --- POLISH (PL) ---
@@ -697,7 +1031,22 @@ const resources = {
             alert_sending: "Wysyłanie...",
             btn_cancel: "Anuluj",
             btn_delete: "Usuń",
-            btn_yes: "Tak"
+            btn_yes: "Tak",
+
+            // AUTH
+            login_title: "Zaloguj się",
+            register_title: "Zarejestruj się",
+            username_placeholder: "Nazwa użytkownika",
+            email_placeholder: "Email",
+            password_placeholder: "Hasło",
+            btn_login: "Zaloguj",
+            btn_register: "Zarejestruj",
+            no_account: "Nie masz konta? Zarejestruj się",
+            has_account: "Masz konto? Zaloguj się",
+            error_empty: "Wypełnij wszystkie pola.",
+            error_login_fail: "Błędny email lub hasło.",
+            success_login: "Zalogowano pomyślnie!",
+            success_register: "Konto utworzone!"
         }
     }
 };
