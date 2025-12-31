@@ -7,7 +7,7 @@ export const storeToken = async (token) => {
   try {
     await AsyncStorage.setItem(key, token);
   } catch (error) {
-    console.log("Token saklanamadı:", error);
+    console.log("Token could not be stored:", error);
   }
 };
 
@@ -15,7 +15,7 @@ export const getToken = async () => {
   try {
     return await AsyncStorage.getItem(key);
   } catch (error) {
-    console.log("Token okunamadı:", error);
+    console.log("Token could not be read:", error);
     return null;
   }
 };
@@ -24,6 +24,6 @@ export const removeToken = async () => {
   try {
     await AsyncStorage.removeItem(key);
   } catch (error) {
-    console.log("Token silinemedi:", error);
+    console.log("The token could not be deleted.:", error);
   }
 };

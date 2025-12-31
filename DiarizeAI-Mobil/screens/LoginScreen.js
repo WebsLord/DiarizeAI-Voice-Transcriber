@@ -1,15 +1,14 @@
 // screens/LoginScreen.js
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, Modal, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next'; // Translation hook
 import { loginUser } from '../api/auth';
 import { storeToken } from '../api/storage';
-// FIX: Added 'src' to the path because LoginScreen is in the root 'screens' folder
-// DÜZELTME: LoginScreen kök 'screens' klasöründe olduğu için yola 'src' eklendi
-import { LANGUAGES } from '../src/services/i18n'; 
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import { LANGUAGES } from '../src/services/i18n'; // Correct import path
 
 export default function LoginScreen({ navigation }) {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation(); // Use translation
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,15 +27,18 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      // Backend expects { email, password }
-      // Backend { email, password } bekler
       const response = await loginUser({ email, password });
       
       if(response.data && response.data.access_token){
          await storeToken(response.data.access_token);
          
-         // Show display name if available
-         // Varsa görünen adı göster
+         // --- CRITICAL FIX: SAVE USERNAME ---
+         // --- KRİTİK DÜZELTME: KULLANICI ADINI KAYDET ---
+         // Backend returns: { user: { username: "Efe#1234", email: "..." } }
+         if (response.data.user && response.data.user.username) {
+             await AsyncStorage.setItem('username', response.data.user.username);
+         }
+         
          const username = response.data.user?.username || "";
          Alert.alert(t('success_login'), `${t('alert_ready')} ${username}`);
          
@@ -56,8 +58,7 @@ export default function LoginScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       
-      {/* LANGUAGE SELECTOR BUTTON (TOP RIGHT) */}
-      {/* DİL SEÇİCİ BUTONU (SAĞ ÜST) */}
+      {/* LANGUAGE SELECTOR BUTTON */}
       <TouchableOpacity style={styles.langButton} onPress={() => setLangModalVisible(true)}>
          <Text style={styles.langButtonText}>
             {LANGUAGES.find(l => l.code === i18n.language)?.flag || '🌐'}
@@ -100,7 +101,6 @@ export default function LoginScreen({ navigation }) {
       </View>
 
       {/* LANGUAGE SELECTION MODAL */}
-      {/* DİL SEÇİM MODALI */}
       <Modal visible={langModalVisible} transparent={true} animationType="slide">
         <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
@@ -140,7 +140,6 @@ const styles = StyleSheet.create({
   button: { backgroundColor: '#E14D4D', padding: 15, borderRadius: 8, alignItems: 'center' },
   btnText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
   linkText: { color: '#4A90E2', textAlign: 'center' },
-  // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 20 },
   modalContent: { backgroundColor: '#222', borderRadius: 10, padding: 20, maxHeight: '60%' },
   modalTitle: { color: 'white', fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
