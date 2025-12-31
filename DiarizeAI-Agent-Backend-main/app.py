@@ -3,7 +3,7 @@
 import os
 import uuid
 import json
-import random # Imported for generating random tags / Rastgele etiket üretimi için eklendi
+import random # Imported for generating random tags / Rastgele etiket üretimi için eklendi.
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 from config import Config
