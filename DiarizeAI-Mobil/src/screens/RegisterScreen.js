@@ -1,4 +1,4 @@
-// screens/RegisterScreen.js
+// src/screens/RegisterScreen.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -17,10 +17,7 @@ export default function RegisterScreen({ navigation }) {
 
     setLoading(true);
     try {
-      // Sends username (base), email, password
-      // Kullanıcı adı (temel), e-posta, şifre gönderir
       await registerUser({ username, email, password });
-      
       Alert.alert(t('alert_success'), t('success_register'));
       navigation.navigate('Login');
     } catch (error) {
@@ -36,7 +33,6 @@ export default function RegisterScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>{t('register_title')}</Text>
-        
         <TextInput 
           style={styles.input} 
           placeholder={t('username_placeholder')} 
@@ -61,11 +57,9 @@ export default function RegisterScreen({ navigation }) {
           value={password} 
           onChangeText={setPassword} 
         />
-        
         <Pressable style={styles.button} onPress={handleRegister} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>{t('btn_register')}</Text>}
         </Pressable>
-
         <Pressable onPress={() => navigation.navigate('Login')} style={{marginTop: 20}}>
           <Text style={styles.linkText}>{t('has_account')}</Text>
         </Pressable>

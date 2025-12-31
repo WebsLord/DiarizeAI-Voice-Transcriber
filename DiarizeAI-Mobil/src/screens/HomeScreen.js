@@ -13,7 +13,8 @@ import { useTranslation } from 'react-i18next';
 
 // --- API SERVICE ---
 import { apiService } from '../services/api'; 
-import { removeToken } from '../../api/storage';
+import { removeToken } from '../api/storage';
+import { saveAnalysisResult } from '../utils/resultStorage';
 
 import styles from '../styles/AppStyles';       
 import { useAudioLogic } from '../hooks/useAudioLogic'; 
@@ -28,7 +29,7 @@ import { AnalysisModal } from '../components/AnalysisModal';
 import { SettingsModal } from '../components/SettingsModal';
 
 const { width } = Dimensions.get('window');
-const MENU_WIDTH = width * 0.75; // Menü Genişliği
+const MENU_WIDTH = width * 0.75; 
 
 export default function HomeScreen({ navigation }) {
   
@@ -56,27 +57,20 @@ export default function HomeScreen({ navigation }) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [newFileName, setNewFileName] = useState("");
 
-  // Animation Values (Çöp Kutusu için)
+  // Animation Values
   const trashScale = useRef(new Animated.Value(1)).current;
   const trashTranslateY = useRef(new Animated.Value(0)).current;
   const trashOpacity = useRef(new Animated.Value(1)).current;
 
-  // ---------------------------------------------------------
-  // MENÜ ANİMASYON MANTIĞI (INTERACTIVE SWIPE)
-  // ---------------------------------------------------------
-  
-  // Menü ekranın sağında (width konumunda) başlar.
-  // Açıldıkça (width - MENU_WIDTH) konumuna gelir.
+  // --- MENU ANIMATION ---
   const menuAnim = useRef(new Animated.Value(width)).current;
   const isMenuOpen = useRef(false);
 
-  // Menüyü kod ile açıp kapatmak için
   const toggleMenu = (shouldOpen) => {
       const toValue = shouldOpen ? width - MENU_WIDTH : width;
-      
       Animated.spring(menuAnim, {
           toValue,
-          useNativeDriver: false, // Layout değişimi için false
+          useNativeDriver: false,
           friction: 8,
           tension: 40
       }).start(() => {
@@ -86,64 +80,43 @@ export default function HomeScreen({ navigation }) {
 
   const menuPanResponder = useRef(
     PanResponder.create({
-        // Dokunma başladığında PanResponder devreye girsin mi?
         onMoveShouldSetPanResponder: (evt, gestureState) => {
             const { dx } = gestureState;
             const { pageX } = evt.nativeEvent;
-
-            // Durum 1: Menü KAPALI iken, ekranın SAĞ kenarından (son 40px) SOLA çekilirse
             if (!isMenuOpen.current) {
                 return pageX > width - 40 && dx < -10;
             }
-            // Durum 2: Menü AÇIK iken, SAĞA doğru çekilirse (kapatmak için)
             if (isMenuOpen.current) {
                 return dx > 10;
             }
             return false;
         },
-        // Sürükleme anında animasyonu güncelle (Real-time follow)
         onPanResponderMove: (evt, gestureState) => {
             let newX = width; 
-            
             if (!isMenuOpen.current) {
-                // Kapalıydı -> Açılıyor (Sola çekiliyor, dx negatif)
                 newX = width + gestureState.dx;
             } else {
-                // Açıktı -> Kapanıyor (Sağa çekiliyor, dx pozitif)
                 newX = (width - MENU_WIDTH) + gestureState.dx;
             }
-
-            // Sınırları belirle (Menü belirlenen alandan fazla çıkamaz)
-            if (newX < width - MENU_WIDTH) newX = width - MENU_WIDTH; // En fazla tam açık konuma
-            if (newX > width) newX = width; // En fazla tam kapalı konuma
-
+            if (newX < width - MENU_WIDTH) newX = width - MENU_WIDTH;
+            if (newX > width) newX = width;
             menuAnim.setValue(newX);
         },
-        // Parmağı bıraktığında ne olsun?
         onPanResponderRelease: (evt, gestureState) => {
             const { dx, vx } = gestureState;
-            const threshold = MENU_WIDTH / 3; // Menünün 3'te 1'i kadar çekildiyse tamamla
-
+            const threshold = MENU_WIDTH / 3;
             if (!isMenuOpen.current) {
-                // Açmaya çalışıyordu
-                if (dx < -threshold || vx < -0.5) {
-                    toggleMenu(true); // Aç
-                } else {
-                    toggleMenu(false); // Geri kapat
-                }
+                if (dx < -threshold || vx < -0.5) toggleMenu(true);
+                else toggleMenu(false);
             } else {
-                // Kapatmaya çalışıyordu
-                if (dx > threshold || vx > 0.5) {
-                    toggleMenu(false); // Kapat
-                } else {
-                    toggleMenu(true); // Geri aç
-                }
+                if (dx > threshold || vx > 0.5) toggleMenu(false);
+                else toggleMenu(true);
             }
         }
     })
   ).current;
 
-  // --- HANDLERS (Artık hepsi burada) ---
+  // --- HANDLERS ---
   
   const handleRecordPress = () => { startRecording(); }; 
   
@@ -166,10 +139,23 @@ export default function HomeScreen({ navigation }) {
         setStatusMessage("Yapay Zeka düşünüyor...");
         const finalResult = await apiService.pollUntilComplete(jobId);
         
+        // --- SAVE RESULT LOCALLY WITH ORIGINAL NAME ---
+        // --- SONUCU ORİJİNAL İSİMLE YEREL OLARAK KAYDET ---
+        // Backend returns UUID, but we add the user's selected file name (selectedFile.name)
+        // Backend UUID döndürür, ancak kullanıcının seçtiği dosya adını (selectedFile.name) ekliyoruz
+        const resultToSave = {
+            ...finalResult,
+            originalName: selectedFile.name || "Audio Recording" // Default fallback / Varsayılan yedek
+        };
+
+        await saveAnalysisResult(resultToSave);
+
         setStatusMessage(t('alert_success'));
-        Alert.alert(t('alert_success'), "Analiz tamamlandı!");
+        Alert.alert(t('alert_success'), "Analiz tamamlandı ve kaydedildi!");
         
-        navigation.navigate('ResultScreen', { data: finalResult });
+        // Pass the enriched result (with name) to ResultScreen
+        // Zenginleştirilmiş sonucu (isimle birlikte) ResultScreen'e gönder
+        navigation.navigate('ResultScreen', { data: resultToSave });
 
     } catch (error) {
         console.error("Süreç Hatası:", error);
@@ -187,7 +173,6 @@ export default function HomeScreen({ navigation }) {
       navigation.replace('Login');
   };
 
-  // Çöp kutusu animasyonu ve silme işlemi
   const handleTrashPress = () => {
       Animated.parallel([
           Animated.timing(trashScale, { toValue: 0, duration: 400, useNativeDriver: true }),
@@ -203,7 +188,6 @@ export default function HomeScreen({ navigation }) {
       });
   };
 
-  // Görselleştiricideki "X" tuşuna basınca
   const handleBackPress = () => {
       Alert.alert(
           t('alert_delete_title'), 
@@ -233,15 +217,11 @@ export default function HomeScreen({ navigation }) {
   };
 
   return (
-    // PanResponder'ı tüm ekrana yayıyoruz ki kenardan çekmeyi algılasın
     <SafeAreaView style={styles.container} {...menuPanResponder.panHandlers}>
       <StatusBar style="light" />
       
-      {/* 1. HEADER */}
-      {/* Menü butonuna basınca manuel aç */}
       <Header onMenuPress={() => toggleMenu(true)} fontScale={fontScale} />
 
-      {/* 2. VISUALIZER */}
       <Visualizer 
           isRecording={isRecording} isPaused={isPaused} duration={duration}
           metering={metering} selectedFile={selectedFile}
@@ -253,7 +233,6 @@ export default function HomeScreen({ navigation }) {
           fontScale={fontScale}
       />
 
-      {/* 3. CONTROLS */}
       <Controls 
           selectedFile={selectedFile} 
           isRecording={isRecording} isPaused={isPaused} isProcessing={isProcessing} 
@@ -264,7 +243,6 @@ export default function HomeScreen({ navigation }) {
           fontScale={fontScale}
       />
 
-      {/* LOADING BAR */}
       {isProcessing && (
         <View style={{ position: 'absolute', bottom: 100, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.8)', padding: 15, borderRadius: 10, flexDirection: 'row', alignItems: 'center', zIndex: 999 }}>
             <ActivityIndicator size="small" color="#FFF" style={{ marginRight: 10 }} />
@@ -272,8 +250,6 @@ export default function HomeScreen({ navigation }) {
         </View>
       )}
 
-      {/* SIDE DRAWER MENU */}
-      {/* Animasyon değerini prop olarak gönderiyoruz */}
       <SideMenu 
         menuAnim={menuAnim} 
         onClose={() => toggleMenu(false)}
@@ -282,10 +258,10 @@ export default function HomeScreen({ navigation }) {
             toggleMenu(false);
             if (screen === 'Records') setTimeout(() => setIsRecordsVisible(true), 300);
             if (screen === 'Settings') setTimeout(() => setIsSettingsVisible(true), 300);
+            if (screen === 'Summarized') navigation.navigate('Summarized');
         }}
       />
 
-      {/* MODALS */}
       <RecordsModal 
         visible={isRecordsVisible} onClose={() => { stopSound(); setIsRecordsVisible(false); }}
         recordings={savedRecordings} onLoad={(item) => { loadFromLibrary(item); setIsRecordsVisible(false); }}
