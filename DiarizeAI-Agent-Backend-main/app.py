@@ -15,8 +15,9 @@ from pipeline import run_whisper_and_agent
 def allowed_file(filename: str, allowed: set[str]) -> bool:
     if "." not in filename:
         return False
-    ext = filename.split(".")[-1]
-    ext = ext.lower()
+    # Split by the last dot to get extension
+    # Uzantıyı almak için son noktadan böl
+    ext = filename.rsplit(".", 1)[1].lower()
     if ext in allowed:
         return True
     else:
@@ -130,17 +131,9 @@ def create_app():
             return jsonify({"error": "Email veya şifre hatalı."}), 401
 
     # ---------------------------------------------------------
-    # JOB ROUTES (UNCHANGED - DEĞİŞMEDİ)
+    # JOB ROUTES (Upload & Process)
     # ---------------------------------------------------------
-    # (Existing Job routes remain the same...)
-    # (Mevcut Job yolları aynı kalır...)
     
-    # ... (Include the rest of your Job routes here exactly as they were) ...
-    # ... (Kalan Job yollarını aynen buraya dahil et) ...
-    # Kodu kısaltmak için Job route'larını buraya tekrar yapıştırmıyorum,
-    # önceki Job kodları aynen geçerli. Sadece üst kısmı değiştirmen yeterli.
-    
-    # --- JOB ROUTE KOPYALAMA ALANI BAŞLANGICI (Mevcut kodunu koru) ---
     @app.post("/api/jobs")
     def upload_audio():
         if "file" not in request.files:
@@ -148,13 +141,28 @@ def create_app():
         f = request.files["file"]
         if not f.filename:
             return jsonify({"error": "Filename is blank"}), 400
+        
+        # Check against allowed extensions from Config
+        # Config'den izin verilen uzantılara karşı kontrol et
         if not allowed_file(f.filename, app.config["ALLOWED_EXTENSIONS"]):
             return jsonify({"error": "Not allowed file type"}), 400
+            
         original = secure_filename(f.filename)
-        ext = original.rsplit(".", 1)[1].lower()
+        # Handle cases where secure_filename might eat non-ASCII chars
+        # secure_filename'in ASCII olmayan karakterleri yutması durumunu yönet
+        if not original: 
+            original = "audio_file"
+
+        if "." in original:
+            ext = original.rsplit(".", 1)[1].lower()
+        else:
+            # Fallback if extension lost
+            ext = f.filename.rsplit(".", 1)[1].lower() if "." in f.filename else "m4a"
+
         new_name = f"{uuid.uuid4().hex}.{ext}"
         save_path = os.path.join(app.config["UPLOAD_FOLDER"], new_name)
         f.save(save_path)
+        
         job = Job(audio_path=save_path, status="uploaded")
         db.session.add(job)
         db.session.commit()
@@ -167,13 +175,18 @@ def create_app():
             job.status = "processing"
             job.error_message = None
             db.session.commit()
+            
+            # Start pipeline
             out = run_whisper_and_agent(job.audio_path)
+            
             job.conversation_type = out.get("conversation_type", "unknown")
             job.summary = out.get("summary", "unknown")
             job.keypoints_json = json.dumps(out.get("keypoints", []), ensure_ascii=False)
+            
             md = out.get("metadata") or {}
             job.language = md.get("language")
             job.clean_transcript = md.get("clean_transcript")
+            
             job.status = "done"
             job.run_count += 1
             db.session.commit()
