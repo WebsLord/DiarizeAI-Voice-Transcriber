@@ -83,7 +83,7 @@ export default function SideMenu({ menuAnim, onClose, onNavigate, onLogout }) {
                     {/* YENİ BUTON: Özetlenenler */}
                     <MenuButton 
                         icon="assignment" 
-                        label="Özetlenenler" // i18n'e eklenirse t('summarized')
+                        label={t('Summarized')}  // i18n'e eklenirse t('summarized')
                         onPress={() => onNavigate('Summarized')} 
                     />
 

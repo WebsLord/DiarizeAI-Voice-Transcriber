@@ -91,7 +91,7 @@ export default function SummarizedScreen({ navigation }) {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#FFF" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Özetlenenler</Text>
+                <Text style={styles.headerTitle}>"Summarized"</Text>
             </View>
 
             {data.length === 0 && !loading ? (

@@ -65,7 +65,7 @@ def create_app():
         # 1. Check if email already exists
         # 1. Email'in zaten kayıtlı olup olmadığını kontrol et
         if User.query.filter_by(email=email).first():
-            return jsonify({"error": "Bu email adresi zaten kayıtlı."}), 400
+            return jsonify({"error": "This email address is already registered."}), 400
         
         # 2. Generate unique username with tag (e.g. Efe#1234)
         # 2. Etiketli benzersiz kullanıcı adı oluştur (örn. Efe#1234)
@@ -91,13 +91,13 @@ def create_app():
             db.session.add(new_user)
             db.session.commit()
             return jsonify({
-                "message": "Kayıt başarılı", 
+                "message": "Registration successful.", 
                 "user_id": new_user.id,
                 "display_name": final_username 
             }), 201
         except Exception as e:
             db.session.rollback()
-            return jsonify({"error": f"Veritabanı hatası: {str(e)}"}), 500
+            return jsonify({"error": f"Database error: {str(e)}"}), 500
 
     @app.route("/auth/login", methods=["POST"])
     def login():
@@ -108,7 +108,7 @@ def create_app():
         data = request.get_json()
 
         if not data or "email" not in data or "password" not in data:
-            return jsonify({"error": "Email ve şifre gereklidir."}), 400
+            return jsonify({"error": "Email and password are required."}), 400
 
         email = data["email"]
         password = data["password"]

@@ -60,5 +60,6 @@
   "topic_sensitive": "주제 초점",
   "topic_hint": "초점 키워드 (예: 시험)",
   "topic_placeholder": "예: 기말고사, 프로젝트...",
-  "original": "원본"
+  "original": "원본",
+  "Summarized": "Summarized"
 }

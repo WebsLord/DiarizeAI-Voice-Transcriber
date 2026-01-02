@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 # -----------------------------
 # 1) Yeni Şema (topics kaldırıldı)
+# 1) New Schema (topics removed)
 # -----------------------------
 
 
@@ -26,6 +27,7 @@ class StructuredSummary(BaseModel):
 
 # -----------------------------
 # 2) Yardımcılar: JSON temizleme/çıkarma
+# 2) Helpers: JSON cleaning/extraction
 # -----------------------------
 def _strip_code_fences(text: str) -> str:
     text = text.strip()
@@ -52,6 +54,7 @@ def _safe_json_loads(raw_text: str) -> Dict[str, Any]:
 
 # -----------------------------
 # 3) Prompt (genel kullanım + diarization + whisper düzeltme)
+# 3) Prompt (general usage + diarization + whisper correction)
 # -----------------------------
 def _build_prompt(
     segments: List[Dict[str, Any]],
@@ -67,12 +70,19 @@ def _build_prompt(
 
     # Segmentleri modele kısa/temiz bir şekilde verelim
     # (Çok uzunsa ileride "windowing/chunking" ekleriz)
+
+    # Let's provide the segments to the model in a short/clean way. 
+    # # (If they are too long, we can add "windowing/chunking" later)
     segments_json = json.dumps(segments, ensure_ascii=False)
 
     # Etiketleme kuralları:
     # - "Öğretmen/Öğrenci" sadece bağlamdan GERÇEKTEN eminsen (yüksek güven).
     # - Emin değilsen Speaker00/Speaker01 kullan.
     # - Eğer segmentlerden konuşmacı ayrımı çıkarmak mümkün değilse tek konuşmacı Speaker00 kullanabilirsin.
+
+    # Labeling rules:
+# - Use "Teacher/Student" only if you are REALLY sure about the context (high confidence).
+# - Use Speaker00/Speaker01 if you are unsure. # - If it is not possible to separate speakers from the segments, you can use Speaker00 for a single speaker.
     label_rules = """
 DİARIZATION & ETİKETLEME:
 - Segmentlerin text alanının başına bir konuşmacı etiketi ekle.
@@ -82,7 +92,16 @@ DİARIZATION & ETİKETLEME:
   * "Speaker00:", "Speaker01:", "Speaker02:" şeklinde kullan.
 - ASLA uydurma isim yazma. Sadece Konsepten çıkartığın rolleri  veya SpeakerXX kullan.
 - Konseptten emin değilsen Teacher/Student veya başka bir rol kullanma, SpeakerXX kullan.
+
+- Add a speaker label to the beginning of the segment's text field. 
+- If you strongly understand the context and can distinguish the roles:
+* Use "Teacher:" and "Student:", "Boss:" and "Employee:", "Candidate and Interviewer", etc.
+ - If the context is "meeting/phone call" and the name/role is unclear:
+* Use "Speaker00:", "Speaker01:", "Speaker02:", etc. - NEVER use made-up names. Only use roles derived from the concept or SpeakerXX.
+ - If you are unsure of the concept, do not use Teacher/Student or any other role, use SpeakerXX.
 """
+
+
 
     correction_rules = """
 WHISPER DÜZELTME:
@@ -94,7 +113,17 @@ WHISPER DÜZELTME:
   * Değişimleri yaparken cümle anlamını koruduğuna dikkat et
   * emin olmadığın yerde minimum müdahale yap
 - Düzeltme yaparken Türkçe/İngilizce karışık olabilir; metnin doğal dilini koru.
+
+WHISPER CORRECTION:
+- The text you enter into segments[].text should be "corrected".
+- Correct the words that Whisper mistranslates, with context and grammar:
+* Correct obvious spelling/word errors
+* Correct grammatical errors
+* Correct errors that distort the meaning
+* Make sure that the meaning of the sentence is preserved when making changes * Make minimal changes where you are unsure
+- When making corrections, Turkish/English may be mixed; preserve the natural language of the text.
 """
+
 
     output_schema = """
 ÇIKTI SADECE GEÇERLİ JSON OLMALI. Ek açıklama yok.
@@ -113,6 +142,24 @@ WHISPER DÜZELTME:
 KURALLAR:
 - keypoints: 3–10 madde
 - metadata.clean_transcript: Aynı konuşmacı arka arkaya konuşuyorsa label’ı sadece ilk satırda yaz.Konuşmacı değişince yeni label ile devam et.Her segmenti alt satırdan yaz, ama aynı konuşmacıda label tekrarlama
+
+OUTPUT MUST BE VALID JSON ONLY. No additional explanation.
+
+SCHEMA:
+{
+"conversation_type": "meeting | university_lecture | phone_call | interview | other",
+"summary": "string",
+"keypoints": ["string", "..."],
+"metadata": {
+"language": "string (guess)",
+"clean_transcript": "string (segmented, corrected transcript)",
+}
+}
+
+RULES:
+- keypoints: 3–10 items
+- metadata.clean_transcript: If the same speaker is speaking consecutively, write the label only on the first line.
+When the speaker changes, continue with a new label. Write each segment on the next line, but do not repeat the label for the same speaker.
 """
 
     task = f"""
@@ -134,14 +181,35 @@ Görevlerin:
 
 INPUT SEGMENTS (JSON):
 {segments_json}
+
+You are an "Audio Transcript Analyzer" agent. Usage: Analysis of conversation recordings from meetings, lectures, phone calls, interviews, etc.
+
+Your tasks:
+1) Predict conversation type.
+2) Generate summary.
+3) Generate keypoints (3–10).
+
+4) Generate metadata.clean_transcript (combine corrected segments).
+
+{label_rules}
+
+{correction_rules}
+
+{output_schema}
+
+INPUT SEGMENTS (JSON):
+
+{segments_json}
 """.strip()
 
     # locale kullanılacaksa ileride yönerge eklenebilir, şimdilik basit bıraktım
+    # If locale is to be used, instructions can be added later; I've left it simple for now.
     return task
 
 
 # -----------------------------
 # 4) Gemini çağrısı (JSON MIME + retry + schema validate)
+# 4) Gemini call (JSON MIME + retry + schema validate)
 # -----------------------------
 def analyze_audio_segments_with_gemini(
     segments: List[Dict[str, Any]],
@@ -153,7 +221,7 @@ def analyze_audio_segments_with_gemini(
     load_dotenv()
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise RuntimeError("GEMINI_API_KEY bulunamadı.")
+        raise RuntimeError("GEMINI_API_KEY didn't found.")
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
     headers = {"Content-Type": "application/json"}
@@ -170,6 +238,7 @@ def analyze_audio_segments_with_gemini(
 
     last_error: Optional[Exception] = None
     # Retry mekanizması çok önemli: Bazen model geçerli JSON döndürmeyebiliyor ve/veya şemaya uymayan veri döndürebiliyor modelin tekrar denemesini sağlıyoruz
+    # The retry mechanism is very important: Sometimes the model may not return valid JSON and/or may return data that does not conform to the schema; we ensure that the model retrys.
     for attempt in range(max_retries + 1):
         try:
             resp = requests.post(url, headers=headers, json=payload, timeout=timeout_sec)
@@ -188,7 +257,7 @@ def analyze_audio_segments_with_gemini(
             raw_text = parts[0]["text"]
             parsed = _safe_json_loads(raw_text)
 
-            # Pydantic doğrulama
+            # Pydantic doğrulama # Pydantic verification
             validated = StructuredSummary.model_validate(parsed)
 
             # # Ek: metadata.segments şemasını da garanti altına alalım
@@ -197,21 +266,28 @@ def analyze_audio_segments_with_gemini(
             # # Segment listesi doğrulaması (opsiyonel ama iyi)
             # _ = [Segment.model_validate(s) for s in segs]
 
+            # # Addendum: Let's also secure the metadata.segments schema
+            # md = validated.metadata or {}
+            # segs = md.get("segments", [])
+            # # Segment list validation (optional but good)
+            # _ = [Segment.model_validate(s) for s in segs]
             return validated.model_dump()
 
         except (json.JSONDecodeError, ValidationError, requests.RequestException, RuntimeError) as e:
             last_error = e
             if attempt < max_retries:
                 # Retry: “sadece JSON, ek metin yok” baskısını artır
+                # Increase the pressure for Retry: “JSON only, no additional text”
                 payload["contents"][0]["parts"][0]["text"] = (
                     prompt
-                    + "\n\nHATA: Önceki çıktın geçerli JSON değildi veya şemaya uymadı. "
-                      "Lütfen SADECE geçerli JSON döndür. Hiçbir ek metin yazma."
+                    + 
+                      "\n\nERROR: Your previous output was not valid JSON or did not conform to the schema. "
+                      "Please return ONLY valid JSON. Do not write any additional text."
                 )
                 continue
             break
 
-    raise RuntimeError(f"Gemini analizi başarısız. Son hata: {last_error}")
+    raise RuntimeError(f"Gemini analysis failed. Final error: {last_error}")
 
 
 # -----------------------------
@@ -221,7 +297,7 @@ if __name__ == "__main__":
     test_segments = [
         {"start": 7.0, "end": 8.0, "text": "Well, can't afford to know him."},
         {"start": 8.0, "end": 10.0, "text": "teacher today we learn about flask and corse."},
-        {"start": 10.0, "end": 12.0, "text": "okey hocam anladim but how to install."},
+        {"start": 10.0, "end": 12.0, "text": "okey hocam understood but how to install."},
     ]
 
     result = analyze_audio_segments_with_gemini(test_segments)

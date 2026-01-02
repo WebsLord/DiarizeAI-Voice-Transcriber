@@ -60,5 +60,6 @@
   "topic_sensitive": "Enfoque del tema",
   "topic_hint": "Palabras clave (ej: Examen)",
   "topic_placeholder": "ej: Examen final, Proyecto...",
-  "original": "Original"
+  "original": "Original",
+  "Summarized": "Resúmenes"
 }

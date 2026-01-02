@@ -60,5 +60,6 @@
   "topic_sensitive": "トピックフォーカス",
   "topic_hint": "注目のキーワード（例：試験）",
   "topic_placeholder": "例：期末試験、プロジェクト...",
-  "original": "オリジナル"
+  "original": "オリジナル",
+  "Summarized": "要約"
 }

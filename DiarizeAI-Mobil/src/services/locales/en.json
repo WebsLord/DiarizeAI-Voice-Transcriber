@@ -60,5 +60,7 @@
   "topic_sensitive": "Topic Focus",
   "topic_hint": "Keywords to focus on (e.g. Exam, Deadline)",
   "topic_placeholder": "e.g. Final Exam, Project...",
-  "original": "Original"
+  "original": "Original",
+  "Summarized": "Summarized"
+
 }

@@ -60,5 +60,6 @@
   "topic_sensitive": "Odak Konu",
   "topic_hint": "Dikkat edilecek kelimeler (örn: Vize, Final)",
   "topic_placeholder": "Örn: Final Sınavı, Proje...",
-  "original": "Orijinal"
+  "original": "Orijinal",
+  "Summarized": "Özetlenenler"
 }

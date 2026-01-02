@@ -27,6 +27,7 @@ def transcribe_audio_with_whisper(audio_file_path: str) -> dict:
         model = whisper.load_model(Config.WHISPER_MODEL)
 
         # 1) Dil tespiti (AUTO) + güven skoru
+        # 1) Language detection (AUTO) + confidence score
         audio = whisper.load_audio(str(audio_path))
         audio = whisper.pad_or_trim(audio)
         mel = whisper.log_mel_spectrogram(audio).to(model.device)
@@ -36,15 +37,21 @@ def transcribe_audio_with_whisper(audio_file_path: str) -> dict:
         detected_prob = float(probs[detected_lang])
 
         # 2) Transcribe (dil parametresi vermiyoruz -> auto)
-        result = model.transcribe(# result içinde 'text' ve 'segments' var text tüm konuşma segments ise zaman aralıklarıyla parçalara ayrılmış hali
+        # 2) Transcribe (we don't specify a language parameter -> auto)
+        result = model.transcribe(# result içinde 'text' ve 'segments' var text tüm konuşma segments ise zaman aralıklarıyla parçalara ayrılmış hali 
+            # The result contains 'text' and 'segments'. 'Text' represents the entire conversation, and 'segments' represents the conversation broken down into segments with time intervals.
+            
             str(audio_path),
             fp16=False,
             verbose=False,
             temperature=0.0, # daha tutarlı sonuçlar için yaratıcılık yok halüsinasyon azalt
+                             # For more consistent results, creativity is lacking, hallucination reduction
             no_speech_threshold=0.6, # sessizlik algılama eşiği konuşma olasılığı %60 altındaysa sessizlik kabul et ve atla
+                                     # Silence detection threshold: If the probability of speech is below 60%, acknowledge and skip the silence.
             logprob_threshold=-1.0,
             compression_ratio_threshold=2.4,
             condition_on_previous_text=True, # bağlamı koru bir cümleyi çevirirken önceki cümleleri de dikkate alır
+                                             # Preserve context: When translating a sentence, consider the sentences that precede it.
         )
 
     clean_text = " ".join((result.get("text") or "").split())

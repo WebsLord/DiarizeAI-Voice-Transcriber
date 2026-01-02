@@ -60,5 +60,6 @@
   "topic_sensitive": "Focus sur le sujet",
   "topic_hint": "Mots-clés à cibler (ex : Examen)",
   "topic_placeholder": "ex : Examen final, Projet...",
-  "original": "Original"
+  "original": "Original",
+  "Summarized": "Résumés"
 }

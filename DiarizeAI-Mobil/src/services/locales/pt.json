@@ -60,5 +60,6 @@
   "topic_sensitive": "Foco no Tópico",
   "topic_hint": "Palavras-chave (ex: Exame)",
   "topic_placeholder": "ex: Exame Final, Projeto...",
-  "original": "Original"
+  "original": "Original",
+  "Summarized": "Summarized"
 }
