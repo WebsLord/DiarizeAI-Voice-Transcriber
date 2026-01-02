@@ -149,7 +149,7 @@ def analyze_audio_segments_with_gemini(
     transcript_lang: str = "original",
     keywords: str = None,
     focus_exclusive: bool = False,
-    model_name: str = "gemini-2.0-flash",
+    model_name: str = "gemini-2.5-flash",
     temperature: float = 0.1,
     max_retries: int = 2,
     timeout_sec: int = 240,
