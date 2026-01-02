@@ -60,7 +60,8 @@ export default function HomeScreen({ navigation }) {
   const [processSettings, setProcessSettings] = useState({
       summaryLang: 'tr',      // Default Turkish Summary
       transcriptLang: 'original', // Default Original Transcript
-      keywords: ''            // No keywords initially
+      keywords: '',            // No keywords initially
+      focusExclusive: false    // Default Focus Mode
   });
 
   // Rename States
@@ -144,10 +145,13 @@ export default function HomeScreen({ navigation }) {
         const uploadResult = await apiService.uploadAudio(selectedFile.uri);
         const jobId = uploadResult.id; 
         
-        // Start Processing (Phase 2: We will pass processSettings here later)
-        // İşlemi Başlat (Faz 2: processSettings'i buraya daha sonra geçireceğiz)
+        // Start Processing (Phase 2: Pass processSettings to backend)
+        // İşlemi Başlat (Faz 2: processSettings'i backend'e gönder)
         setStatusMessage(t('alert_sending'));
-        await apiService.startProcessing(jobId);
+        
+        // --- FIX IS HERE: Passing 'processSettings' as the second argument ---
+        // --- DÜZELTME BURADA: 'processSettings' ikinci argüman olarak gönderiliyor ---
+        await apiService.startProcessing(jobId, processSettings);
 
         // Poll for results
         setStatusMessage("Yapay Zeka düşünüyor...");

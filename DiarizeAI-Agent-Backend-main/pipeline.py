@@ -29,12 +29,24 @@ def run_whisper_and_agent(
     # 1. Ses dosyasını transkribe et
     transcription = transcribe_audio_with_whisper(audio_path)
     
+    # --- CRITICAL FIX: Extract 'segments' list if transcription is a dictionary ---
+    # --- KRİTİK DÜZELTME: Eğer transkripsiyon bir sözlükse 'segments' listesini çıkar ---
+    if isinstance(transcription, dict) and "segments" in transcription:
+        segments_to_process = transcription["segments"]
+    else:
+        # If it's already a list or other format, use as is
+        # Zaten listeyse veya başka bir format ise olduğu gibi kullan
+        segments_to_process = transcription
+
     # 2. Analyze with Gemini, passing user preferences
     # 2. Kullanıcı tercihlerini ileterek Gemini ile analiz et
-    # Note: agent.py needs to be updated to accept these args too!
-    # Not: agent.py dosyasının da bu argümanları kabul edecek şekilde güncellenmesi gerekiyor!
+    
+    # Debug log in English
+    # İngilizce hata ayıklama logu
+    print(f"🤖 AGENT RUNNING -> Lang: {summary_lang}, Keywords: {keywords}, Exclusive: {focus_exclusive}")
+    
     analysis_result = analyze_audio_segments_with_gemini(
-        transcription,
+        segments=segments_to_process, # Sending the correct list / Doğru listeyi gönderiyoruz
         summary_lang=summary_lang,
         transcript_lang=transcript_lang,
         keywords=keywords,

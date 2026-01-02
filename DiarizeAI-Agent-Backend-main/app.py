@@ -3,7 +3,7 @@
 import os
 import uuid
 import json
-import random # Imported for generating random tags / Rastgele etiket üretimi için eklendi.
+import random 
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 from config import Config
@@ -56,30 +56,28 @@ def create_app():
         # We need email, password and a base username (display name)
         # Email, şifre ve temel kullanıcı adına (görünen ad) ihtiyacımız var
         if not data or "email" not in data or "password" not in data or "username" not in data:
-            return jsonify({"error": "Email, Kullanıcı Adı ve Şifre gereklidir."}), 400
+            return jsonify({"error": "Email, Username, and Password are required."}), 400
         
         email = data["email"]
-        base_username = data["username"] # e.g. "Efe"
+        base_username = data["username"] 
         password = data["password"]
 
         # 1. Check if email already exists
         # 1. Email'in zaten kayıtlı olup olmadığını kontrol et
         if User.query.filter_by(email=email).first():
-            return jsonify({"error": "Bu email adresi zaten kayıtlı."}), 400
+            return jsonify({"error": "This email address is already registered."}), 400
         
         # 2. Generate unique username with tag (e.g. Efe#1234)
         # 2. Etiketli benzersiz kullanıcı adı oluştur (örn. Efe#1234)
-        # Try 5 times to find a unique tag
         final_username = None
         for _ in range(5):
-            tag = f"{random.randint(1000, 9999)}" # Random 4 digit number / Rastgele 4 haneli sayı
+            tag = f"{random.randint(1000, 9999)}" 
             candidate = f"{base_username}#{tag}"
             if not User.query.filter_by(username=candidate).first():
                 final_username = candidate
                 break
         
         if not final_username:
-            # Fallback if 5 attempts fail (rare)
             final_username = f"{base_username}#{uuid.uuid4().hex[:4]}"
 
         # 3. Create user
@@ -91,13 +89,13 @@ def create_app():
             db.session.add(new_user)
             db.session.commit()
             return jsonify({
-                "message": "Kayıt başarılı", 
+                "message": "Registration successful", 
                 "user_id": new_user.id,
                 "display_name": final_username 
             }), 201
         except Exception as e:
             db.session.rollback()
-            return jsonify({"error": f"Veritabanı hatası: {str(e)}"}), 500
+            return jsonify({"error": f"Database error: {str(e)}"}), 500
 
     @app.route("/auth/login", methods=["POST"])
     def login():
@@ -108,13 +106,13 @@ def create_app():
         data = request.get_json()
 
         if not data or "email" not in data or "password" not in data:
-            return jsonify({"error": "Email ve şifre gereklidir."}), 400
+            return jsonify({"error": "Email and password are required."}), 400
 
         email = data["email"]
         password = data["password"]
 
-        # Find user by EMAIL (not username)
-        # Kullanıcıyı EMAIL ile bul (kullanıcı adı ile değil)
+        # Find user by EMAIL
+        # Kullanıcıyı EMAIL ile bul
         user = User.query.filter_by(email=email).first()
 
         if user and user.check_password(password):
@@ -123,12 +121,12 @@ def create_app():
                 "token_type": "bearer",
                 "user": {
                     "id": user.id,
-                    "username": user.username, # Returns "Efe#1234" / "Efe#1234" döner
+                    "username": user.username, 
                     "email": user.email
                 }
             }), 200
         else:
-            return jsonify({"error": "Email veya şifre hatalı."}), 401
+            return jsonify({"error": "Invalid email or password."}), 401
 
     # ---------------------------------------------------------
     # JOB ROUTES (Upload & Process)
@@ -142,21 +140,18 @@ def create_app():
         if not f.filename:
             return jsonify({"error": "Filename is blank"}), 400
         
-        # Check against allowed extensions from Config
-        # Config'den izin verilen uzantılara karşı kontrol et
+        # Check against allowed extensions
+        # İzin verilen uzantılara karşı kontrol et
         if not allowed_file(f.filename, app.config["ALLOWED_EXTENSIONS"]):
             return jsonify({"error": "Not allowed file type"}), 400
             
         original = secure_filename(f.filename)
-        # Handle cases where secure_filename might eat non-ASCII chars
-        # secure_filename'in ASCII olmayan karakterleri yutması durumunu yönet
         if not original: 
             original = "audio_file"
 
         if "." in original:
             ext = original.rsplit(".", 1)[1].lower()
         else:
-            # Fallback if extension lost
             ext = f.filename.rsplit(".", 1)[1].lower() if "." in f.filename else "m4a"
 
         new_name = f"{uuid.uuid4().hex}.{ext}"
@@ -172,24 +167,50 @@ def create_app():
     def run_job(job_id: int):
         job = Job.query.get_or_404(job_id) 
         
-        # 1. Get Settings from Request Body
-        # 1. İstek Gövdesinden Ayarları Al
-        data = request.get_json(silent=True) or {}
+        # 1. Get Settings from Request Body (Bulletproof Mode)
+        # Try getting JSON first, then Form Data, then Query Args.
+        # 1. İstek Gövdesinden Ayarları Al (Kurşun Geçirmez Mod)
+        # Önce JSON, sonra Form Data, sonra Query Args dene.
+        data = request.get_json(silent=True) or request.form.to_dict() or request.args.to_dict() or {}
         
-        # 2. Update Job with Settings
-        # 2. İşi Ayarlarla Güncelle
-        if "summaryLang" in data: job.summary_lang = data["summaryLang"]
-        if "transcriptLang" in data: job.transcript_lang = data["transcriptLang"]
-        if "keywords" in data: job.input_keywords = data["keywords"]
-        if "focusExclusive" in data: job.focus_exclusive = data["focusExclusive"]
+        # --- DEBUG LOG ---
+        print(f"🌍 INCOMING FRONTEND DATA (RAW): {data}")
+        # -----------------
+
+        # 2. Update Job with Settings (Check for both camelCase and snake_case)
+        # 2. İşi Ayarlarla Güncelle (Hem camelCase hem snake_case kontrolü)
+        
+        # Check for Summary Language / Özet Dili Kontrolü
+        val_summary = data.get("summaryLang") or data.get("summary_lang")
+        if val_summary:
+            job.summary_lang = val_summary
+            
+        # Check for Transcript Language / Transkript Dili Kontrolü
+        val_transcript = data.get("transcriptLang") or data.get("transcript_lang")
+        if val_transcript:
+            job.transcript_lang = val_transcript
+            
+        # Check for Keywords / Anahtar Kelime Kontrolü
+        val_keywords = data.get("keywords") or data.get("input_keywords")
+        if val_keywords:
+            job.input_keywords = val_keywords
+            
+        # Check for Exclusive Focus / Odak Modu Kontrolü
+        val_exclusive = data.get("focusExclusive") or data.get("focus_exclusive")
+        # Handle string "true"/"false" from Form Data if necessary
+        # Gerekirse Form Data'dan gelen string "true"/"false" değerlerini işle
+        if str(val_exclusive).lower() == "true":
+            job.focus_exclusive = True
+        elif str(val_exclusive).lower() == "false":
+            job.focus_exclusive = False
         
         try:
             job.status = "processing"
             job.error_message = None
             db.session.commit()
             
-            # 3. Pass settings to Pipeline
-            # 3. Ayarları Pipeline'a Geçir
+            # 3. Pass settings to Pipeline Explicitly
+            # 3. Ayarları Pipeline'a Açıkça Geçir
             out = run_whisper_and_agent(
                 audio_path=job.audio_path,
                 summary_lang=job.summary_lang,
@@ -210,7 +231,12 @@ def create_app():
             job.run_count += 1
             db.session.commit()
             return jsonify(job.to_dict())
+
         except Exception as e:
+            # Print error to terminal in English
+            # Terminale hatayı İngilizce yazdır
+            print(f"❌ ERROR DURING PROCESSING: {str(e)}")
+            
             job.status = "error"
             job.error_message = str(e)
             job.run_count += 1
@@ -219,8 +245,6 @@ def create_app():
         
     @app.post("/api/jobs/<int:job_id>/rerun")
     def rerun_job(job_id: int):
-        # Re-run uses existing settings in DB
-        # Yeniden çalıştırma DB'deki mevcut ayarları kullanır
         return run_job(job_id)
 
     @app.get("/api/jobs/<int:job_id>")
