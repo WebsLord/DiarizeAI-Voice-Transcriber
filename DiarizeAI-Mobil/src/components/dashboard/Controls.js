@@ -1,3 +1,5 @@
+// src/components/dashboard/Controls.js
+
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
@@ -6,12 +8,13 @@ import { useTranslation } from 'react-i18next';
 import styles from '../../styles/AppStyles';
 import { PulsingGlowButton } from '../PulsingButton';
 
-// Added fontScale prop
-// fontScale özelliği eklendi
+// Added fontScale and onSettingsPress props
+// fontScale ve onSettingsPress özellikleri eklendi
 export const Controls = ({ 
     selectedFile, isRecording, isPaused, isProcessing,
     pickFile, saveRecordingToDevice, handleProcessPress,
     handleTrashPress, resumeRecording, pauseRecording, stopRecording, handleRecordPress,
+    onSettingsPress, // NEW PROP / YENİ ÖZELLİK
     fontScale = 1
 }) => {
     
@@ -35,14 +38,31 @@ export const Controls = ({
             {/* ACTION BUTTONS */}
             {/* İŞLEM BUTONLARI */}
             {selectedFile && !isRecording && (
-                <View style={{flexDirection: 'row', gap: 10}}>
-                    <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#333'}]} onPress={saveRecordingToDevice}>
+                <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
+                    
+                    {/* 1. SAVE LOCAL BUTTON */}
+                    <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#333', paddingHorizontal: 15}]} onPress={saveRecordingToDevice}>
                         <FontAwesome5 name="save" size={20} color="#A0A0A0" />
-                        <Text style={[styles.uploadText, {marginLeft: 8}, dynamicSize(16)]}>{t('save')}</Text>
+                    </TouchableOpacity>
+
+                    {/* 2. SETTINGS BUTTON (NEW) */}
+                    {/* AYARLAR BUTONU (YENİ) */}
+                    <TouchableOpacity 
+                        style={[styles.actionButton, {backgroundColor: '#333', paddingHorizontal: 15}]} 
+                        onPress={onSettingsPress}
+                    >
+                        <Ionicons name="options" size={24} color="#4A90E2" />
                     </TouchableOpacity>
     
+                    {/* 3. PROCESS BUTTON (Fixed Alignment) */}
+                    {/* DÜZELTME: justifyContent: 'center' eklendi */}
                     <TouchableOpacity 
-                        style={[styles.actionButton, styles.sendButton, isProcessing && {opacity: 0.7}]} 
+                        style={[
+                            styles.actionButton, 
+                            styles.sendButton, 
+                            isProcessing && {opacity: 0.7}, 
+                            { flex: 1, justifyContent: 'center' } // Center content explicitly / İçeriği ortala
+                        ]} 
                         onPress={handleProcessPress}
                         disabled={isProcessing}
                     >

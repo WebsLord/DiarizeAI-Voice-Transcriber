@@ -27,6 +27,7 @@ import { Controls } from '../components/dashboard/Controls';
 import { RecordsModal } from '../components/RecordsModal';
 import { AnalysisModal } from '../components/AnalysisModal';
 import { SettingsModal } from '../components/SettingsModal';
+import { ProcessSettingsModal } from '../components/ProcessSettingsModal'; // IMPORT NEW MODAL
 
 const { width } = Dimensions.get('window');
 const MENU_WIDTH = width * 0.75; 
@@ -48,10 +49,19 @@ export default function HomeScreen({ navigation }) {
   const [isRecordsVisible, setIsRecordsVisible] = useState(false); 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [isAnalysisVisible, setIsAnalysisVisible] = useState(false);
+  const [isProcessSettingsVisible, setIsProcessSettingsVisible] = useState(false); // NEW STATE
   
   // Processing States
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+
+  // Process Settings Data
+  // İşlem Ayarları Verisi
+  const [processSettings, setProcessSettings] = useState({
+      summaryLang: 'tr',      // Default Turkish Summary
+      transcriptLang: 'original', // Default Original Transcript
+      keywords: ''            // No keywords initially
+  });
 
   // Rename States
   const [isEditingName, setIsEditingName] = useState(false);
@@ -130,22 +140,25 @@ export default function HomeScreen({ navigation }) {
         setIsProcessing(true);
         setStatusMessage(t('processing'));
 
+        // Upload
         const uploadResult = await apiService.uploadAudio(selectedFile.uri);
         const jobId = uploadResult.id; 
         
+        // Start Processing (Phase 2: We will pass processSettings here later)
+        // İşlemi Başlat (Faz 2: processSettings'i buraya daha sonra geçireceğiz)
         setStatusMessage(t('alert_sending'));
         await apiService.startProcessing(jobId);
 
+        // Poll for results
         setStatusMessage("Yapay Zeka düşünüyor...");
         const finalResult = await apiService.pollUntilComplete(jobId);
         
-        // --- SAVE RESULT LOCALLY WITH ORIGINAL NAME ---
-        // --- SONUCU ORİJİNAL İSİMLE YEREL OLARAK KAYDET ---
-        // Backend returns UUID, but we add the user's selected file name (selectedFile.name)
-        // Backend UUID döndürür, ancak kullanıcının seçtiği dosya adını (selectedFile.name) ekliyoruz
+        // Save Result Locally + Include Settings used!
+        // Sonucu Yerel Olarak Kaydet + Kullanılan ayarları dahil et!
         const resultToSave = {
             ...finalResult,
-            originalName: selectedFile.name || "Audio Recording" // Default fallback / Varsayılan yedek
+            originalName: selectedFile.name || "Audio Recording",
+            usedSettings: processSettings // Save what settings were active / Hangi ayarların aktif olduğunu kaydet
         };
 
         await saveAnalysisResult(resultToSave);
@@ -153,8 +166,6 @@ export default function HomeScreen({ navigation }) {
         setStatusMessage(t('alert_success'));
         Alert.alert(t('alert_success'), "Analiz tamamlandı ve kaydedildi!");
         
-        // Pass the enriched result (with name) to ResultScreen
-        // Zenginleştirilmiş sonucu (isimle birlikte) ResultScreen'e gönder
         navigation.navigate('ResultScreen', { data: resultToSave });
 
     } catch (error) {
@@ -233,6 +244,7 @@ export default function HomeScreen({ navigation }) {
           fontScale={fontScale}
       />
 
+      {/* CONTROLS: Passed settings handler */}
       <Controls 
           selectedFile={selectedFile} 
           isRecording={isRecording} isPaused={isPaused} isProcessing={isProcessing} 
@@ -241,6 +253,7 @@ export default function HomeScreen({ navigation }) {
           resumeRecording={resumeRecording} pauseRecording={pauseRecording}
           stopRecording={stopRecording} handleRecordPress={handleRecordPress}
           fontScale={fontScale}
+          onSettingsPress={() => setIsProcessSettingsVisible(true)} // OPEN SETTINGS
       />
 
       {isProcessing && (
@@ -262,12 +275,22 @@ export default function HomeScreen({ navigation }) {
         }}
       />
 
+      {/* MODALS */}
       <RecordsModal 
         visible={isRecordsVisible} onClose={() => { stopSound(); setIsRecordsVisible(false); }}
         recordings={savedRecordings} onLoad={(item) => { loadFromLibrary(item); setIsRecordsVisible(false); }}
         onDelete={deleteRecording} onPlay={playSound} onShare={shareFileUri} onRename={handleListRename}
         playingId={playingId} isPlaying={isPlaying} fontScale={fontScale}
       />
+      
+      {/* NEW: PROCESS SETTINGS MODAL */}
+      <ProcessSettingsModal 
+        visible={isProcessSettingsVisible}
+        onClose={() => setIsProcessSettingsVisible(false)}
+        settings={processSettings}
+        onSave={(newSettings) => setProcessSettings(newSettings)}
+      />
+
       <AnalysisModal visible={isAnalysisVisible} onClose={() => setIsAnalysisVisible(false)} />
       <SettingsModal 
         visible={isSettingsVisible} onClose={() => setIsSettingsVisible(false)}

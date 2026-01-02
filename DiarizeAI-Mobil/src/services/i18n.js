@@ -9,8 +9,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const LANGUAGES = [
     { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
     { code: 'en', label: 'English', flag: '🇬🇧' },
-    { code: 'az', label: 'Azərbaycan', flag: '🇦🇿' }, // Azerice added
-    { code: 'fa', label: 'فارسی', flag: '🇮🇷' },      // Farsça added
+    { code: 'az', label: 'Azərbaycan', flag: '🇦🇿' },
+    { code: 'fa', label: 'فارسی', flag: '🇮🇷' },
     { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
     { code: 'fr', label: 'Français', flag: '🇫🇷' },
     { code: 'es', label: 'Español', flag: '🇪🇸' },
@@ -73,7 +73,7 @@ const resources = {
             btn_delete: "Delete",
             btn_yes: "Yes, Delete",
             
-            // AUTH (Giriş/Kayıt)
+            // AUTH
             login_title: "Diarize AI Login",
             register_title: "Sign Up",
             username_placeholder: "Username (Display Name)",
@@ -86,7 +86,18 @@ const resources = {
             error_empty: "Please fill all fields.",
             error_login_fail: "Email or password incorrect.",
             success_login: "Login Successful!",
-            success_register: "Account created! Please log in."
+            success_register: "Account created! Please log in.",
+
+            // PROCESS SETTINGS
+            process_settings: "Process Settings",
+            summary_language: "Summary Language",
+            summary_lang_hint: "In which language do you want the summary?",
+            transcript_language: "Transcript Language",
+            transcript_lang_hint: "Translate transcript to which language?",
+            topic_sensitive: "Topic Focus",
+            topic_hint: "Keywords to focus on (e.g. Exam, Deadline)",
+            topic_placeholder: "e.g. Final Exam, Project...",
+            original: "Original"
         }
     },
     // --- TURKISH ---
@@ -133,7 +144,7 @@ const resources = {
             btn_delete: "Sil",
             btn_yes: "Evet, Sil",
 
-            // AUTH (Giriş/Kayıt)
+            // AUTH
             login_title: "Diarize AI Giriş",
             register_title: "Kayıt Ol",
             username_placeholder: "Kullanıcı Adı (Görünen İsim)",
@@ -146,7 +157,18 @@ const resources = {
             error_empty: "Lütfen tüm alanları doldurunuz.",
             error_login_fail: "E-posta veya şifre hatalı.",
             success_login: "Giriş Başarılı!",
-            success_register: "Hesap oluşturuldu! Giriş yapabilirsiniz."
+            success_register: "Hesap oluşturuldu! Giriş yapabilirsiniz.",
+
+            // PROCESS SETTINGS
+            process_settings: "İşlem Ayarları",
+            summary_language: "Özet Dili",
+            summary_lang_hint: "Özetin hangi dilde olmasını istersin?",
+            transcript_language: "Transkript Dili",
+            transcript_lang_hint: "Konuşma metni hangi dile çevrilsin?",
+            topic_sensitive: "Odak Konu",
+            topic_hint: "Dikkat edilecek kelimeler (örn: Vize, Final)",
+            topic_placeholder: "Örn: Final Sınavı, Proje...",
+            original: "Orijinal"
         }
     },
     // --- AZERBAIJANI (AZ) ---
@@ -192,8 +214,6 @@ const resources = {
             btn_cancel: "Ləğv et",
             btn_delete: "Sil",
             btn_yes: "Bəli, Sil",
-
-            // AUTH
             login_title: "Diarize AI Giriş",
             register_title: "Qeydiyyat",
             username_placeholder: "İstifadəçi adı",
@@ -206,7 +226,18 @@ const resources = {
             error_empty: "Zəhmət olmasa bütün xanaları doldurun.",
             error_login_fail: "E-poçt və ya şifrə səhvdir.",
             success_login: "Giriş uğurlu!",
-            success_register: "Hesab yaradıldı! Giriş edə bilərsiniz."
+            success_register: "Hesab yaradıldı! Giriş edə bilərsiniz.",
+
+            // PROCESS SETTINGS
+            process_settings: "Emal Tənzimləmələri",
+            summary_language: "Xülasə Dili",
+            summary_lang_hint: "Xülasəni hansı dildə istəyirsiniz?",
+            transcript_language: "Transkript Dili",
+            transcript_lang_hint: "Transkripti hansı dilə tərcümə etmək?",
+            topic_sensitive: "Mövzu Həssaslığı",
+            topic_hint: "Diqqət ediləcək açar sözlər (məs. İmtahan)",
+            topic_placeholder: "məs. Yekun İmtahan, Layihə...",
+            original: "Orijinal"
         }
     },
     // --- PERSIAN (FA) ---
@@ -252,8 +283,6 @@ const resources = {
             btn_cancel: "لغو",
             btn_delete: "حذف",
             btn_yes: "بله، حذف کن",
-
-            // AUTH
             login_title: "ورود Diarize AI",
             register_title: "ثبت نام",
             username_placeholder: "نام کاربری",
@@ -266,7 +295,18 @@ const resources = {
             error_empty: "لطفا تمام فیلدها را پر کنید.",
             error_login_fail: "ایمیل یا رمز عبور اشتباه است.",
             success_login: "ورود موفقیت‌آمیز بود!",
-            success_register: "حساب ایجاد شد! وارد شوید."
+            success_register: "حساب ایجاد شد! وارد شوید.",
+
+            // PROCESS SETTINGS
+            process_settings: "تنظیمات پردازش",
+            summary_language: "زبان خلاصه",
+            summary_lang_hint: "خلاصه را به چه زبانی می‌خواهید؟",
+            transcript_language: "زبان متن",
+            transcript_lang_hint: "متن به چه زبانی ترجمه شود؟",
+            topic_sensitive: "تمرکز بر موضوع",
+            topic_hint: "کلمات کلیدی برای تمرکز (مانند امتحان)",
+            topic_placeholder: "مانند: امتحان نهایی، پروژه...",
+            original: "اصلی"
         }
     },
     // --- GERMAN (DE) ---
@@ -312,8 +352,6 @@ const resources = {
             btn_cancel: "Abbrechen",
             btn_delete: "Löschen",
             btn_yes: "Ja",
-            
-            // AUTH
             login_title: "Diarize AI Login",
             register_title: "Registrieren",
             username_placeholder: "Benutzername",
@@ -326,7 +364,18 @@ const resources = {
             error_empty: "Bitte alle Felder ausfüllen.",
             error_login_fail: "E-Mail oder Passwort falsch.",
             success_login: "Anmeldung erfolgreich!",
-            success_register: "Konto erstellt! Bitte anmelden."
+            success_register: "Konto erstellt! Bitte anmelden.",
+
+            // PROCESS SETTINGS
+            process_settings: "Prozess-Einstellungen",
+            summary_language: "Sprache der Zusammenfassung",
+            summary_lang_hint: "In welcher Sprache möchten Sie die Zusammenfassung?",
+            transcript_language: "Transkript-Sprache",
+            transcript_lang_hint: "Transkript in welche Sprache übersetzen?",
+            topic_sensitive: "Themenfokus",
+            topic_hint: "Schlüsselwörter (z.B. Prüfung, Frist)",
+            topic_placeholder: "z.B. Abschlussprüfung, Projekt...",
+            original: "Original"
         }
     },
     // --- FRENCH (FR) ---
@@ -372,8 +421,6 @@ const resources = {
             btn_cancel: "Annuler",
             btn_delete: "Supprimer",
             btn_yes: "Oui",
-
-            // AUTH
             login_title: "Connexion",
             register_title: "S'inscrire",
             username_placeholder: "Nom d'utilisateur",
@@ -386,7 +433,18 @@ const resources = {
             error_empty: "Veuillez remplir tous les champs.",
             error_login_fail: "Email ou mot de passe incorrect.",
             success_login: "Connexion réussie !",
-            success_register: "Compte créé ! Connectez-vous."
+            success_register: "Compte créé ! Connectez-vous.",
+
+            // PROCESS SETTINGS
+            process_settings: "Paramètres de traitement",
+            summary_language: "Langue du résumé",
+            summary_lang_hint: "Dans quelle langue voulez-vous le résumé ?",
+            transcript_language: "Langue de transcription",
+            transcript_lang_hint: "Traduire la transcription en quelle langue ?",
+            topic_sensitive: "Focus sur le sujet",
+            topic_hint: "Mots-clés à cibler (ex : Examen)",
+            topic_placeholder: "ex : Examen final, Projet...",
+            original: "Original"
         }
     },
     // --- SPANISH (ES) ---
@@ -432,8 +490,6 @@ const resources = {
             btn_cancel: "Cancelar",
             btn_delete: "Borrar",
             btn_yes: "Sí",
-
-            // AUTH
             login_title: "Iniciar Sesión",
             register_title: "Registrarse",
             username_placeholder: "Nombre de usuario",
@@ -446,7 +502,18 @@ const resources = {
             error_empty: "Rellena todos los campos.",
             error_login_fail: "Correo o contraseña incorrectos.",
             success_login: "¡Éxito!",
-            success_register: "¡Cuenta creada!"
+            success_register: "¡Cuenta creada!",
+
+            // PROCESS SETTINGS
+            process_settings: "Configuración de proceso",
+            summary_language: "Idioma del resumen",
+            summary_lang_hint: "¿En qué idioma quieres el resumen?",
+            transcript_language: "Idioma de transcripción",
+            transcript_lang_hint: "¿Traducir transcripción a qué idioma?",
+            topic_sensitive: "Enfoque del tema",
+            topic_hint: "Palabras clave (ej: Examen)",
+            topic_placeholder: "ej: Examen final, Proyecto...",
+            original: "Original"
         }
     },
     // --- ITALIAN (IT) ---
@@ -492,8 +559,6 @@ const resources = {
             btn_cancel: "Annulla",
             btn_delete: "Elimina",
             btn_yes: "Sì",
-
-            // AUTH
             login_title: "Accedi",
             register_title: "Registrati",
             username_placeholder: "Nome utente",
@@ -506,7 +571,18 @@ const resources = {
             error_empty: "Compila tutti i campi.",
             error_login_fail: "Email o password errati.",
             success_login: "Accesso riuscito!",
-            success_register: "Account creato!"
+            success_register: "Account creato!",
+
+            // PROCESS SETTINGS
+            process_settings: "Impostazioni processo",
+            summary_language: "Lingua riassunto",
+            summary_lang_hint: "In che lingua vuoi il riassunto?",
+            transcript_language: "Lingua trascrizione",
+            transcript_lang_hint: "Tradurre trascrizione in quale lingua?",
+            topic_sensitive: "Focus argomento",
+            topic_hint: "Parole chiave (es: Esame)",
+            topic_placeholder: "es: Esame finale, Progetto...",
+            original: "Originale"
         }
     },
     // --- PORTUGUESE (PT) ---
@@ -552,8 +628,6 @@ const resources = {
             btn_cancel: "Cancelar",
             btn_delete: "Excluir",
             btn_yes: "Sim",
-
-            // AUTH
             login_title: "Entrar",
             register_title: "Cadastrar",
             username_placeholder: "Nome de usuário",
@@ -566,7 +640,18 @@ const resources = {
             error_empty: "Preencha todos os campos.",
             error_login_fail: "Email ou senha incorretos.",
             success_login: "Sucesso!",
-            success_register: "Conta criada!"
+            success_register: "Conta criada!",
+
+            // PROCESS SETTINGS
+            process_settings: "Configurações de Processo",
+            summary_language: "Idioma do Resumo",
+            summary_lang_hint: "Em qual idioma você quer o resumo?",
+            transcript_language: "Idioma da Transcrição",
+            transcript_lang_hint: "Traduzir transcrição para qual idioma?",
+            topic_sensitive: "Foco no Tópico",
+            topic_hint: "Palavras-chave (ex: Exame)",
+            topic_placeholder: "ex: Exame Final, Projeto...",
+            original: "Original"
         }
     },
     // --- RUSSIAN (RU) ---
@@ -612,8 +697,6 @@ const resources = {
             btn_cancel: "Отмена",
             btn_delete: "Удалить",
             btn_yes: "Да",
-
-            // AUTH
             login_title: "Вход",
             register_title: "Регистрация",
             username_placeholder: "Имя пользователя",
@@ -626,7 +709,18 @@ const resources = {
             error_empty: "Заполните все поля.",
             error_login_fail: "Неверный email или пароль.",
             success_login: "Успешно!",
-            success_register: "Аккаунт создан!"
+            success_register: "Аккаунт создан!",
+
+            // PROCESS SETTINGS
+            process_settings: "Настройки обработки",
+            summary_language: "Язык резюме",
+            summary_lang_hint: "На каком языке вы хотите резюме?",
+            transcript_language: "Язык транскрипции",
+            transcript_lang_hint: "Перевести транскрипцию на какой язык?",
+            topic_sensitive: "Фокус темы",
+            topic_hint: "Ключевые слова (например: Экзамен)",
+            topic_placeholder: "напр.: Финальный экзамен, Проект...",
+            original: "Оригинал"
         }
     },
     // --- CHINESE (ZH) ---
@@ -672,8 +766,6 @@ const resources = {
             btn_cancel: "取消",
             btn_delete: "删除",
             btn_yes: "是的",
-            
-            // AUTH
             login_title: "登录",
             register_title: "注册",
             username_placeholder: "用户名",
@@ -686,7 +778,18 @@ const resources = {
             error_empty: "请填写所有字段。",
             error_login_fail: "邮箱或密码错误。",
             success_login: "登录成功！",
-            success_register: "账号已创建！"
+            success_register: "账号已创建！",
+
+            // PROCESS SETTINGS
+            process_settings: "处理设置",
+            summary_language: "摘要语言",
+            summary_lang_hint: "您希望摘要使用哪种语言？",
+            transcript_language: "转录语言",
+            transcript_lang_hint: "将转录翻译成哪种语言？",
+            topic_sensitive: "主题焦点",
+            topic_hint: "关注的关键词（例如：考试）",
+            topic_placeholder: "例如：期末考试，项目...",
+            original: "原件"
         }
     },
     // --- JAPANESE (JA) ---
@@ -732,8 +835,6 @@ const resources = {
             btn_cancel: "キャンセル",
             btn_delete: "削除",
             btn_yes: "はい",
-            
-            // AUTH
             login_title: "ログイン",
             register_title: "登録",
             username_placeholder: "ユーザー名",
@@ -746,7 +847,18 @@ const resources = {
             error_empty: "すべての項目を入力してください。",
             error_login_fail: "メールまたはパスワードが間違っています。",
             success_login: "ログイン成功！",
-            success_register: "アカウント作成完了！"
+            success_register: "アカウント作成完了！",
+
+            // PROCESS SETTINGS
+            process_settings: "処理設定",
+            summary_language: "要約の言語",
+            summary_lang_hint: "要約をどの言語にしますか？",
+            transcript_language: "文字起こしの言語",
+            transcript_lang_hint: "文字起こしをどの言語に翻訳しますか？",
+            topic_sensitive: "トピックフォーカス",
+            topic_hint: "注目のキーワード（例：試験）",
+            topic_placeholder: "例：期末試験、プロジェクト...",
+            original: "オリジナル"
         }
     },
     // --- KOREAN (KO) ---
@@ -792,8 +904,6 @@ const resources = {
             btn_cancel: "취소",
             btn_delete: "삭제",
             btn_yes: "예",
-            
-            // AUTH
             login_title: "로그인",
             register_title: "회원가입",
             username_placeholder: "사용자 이름",
@@ -806,7 +916,18 @@ const resources = {
             error_empty: "모든 필드를 채워주세요.",
             error_login_fail: "이메일 또는 비밀번호가 올바르지 않습니다.",
             success_login: "로그인 성공!",
-            success_register: "계정이 생성되었습니다!"
+            success_register: "계정이 생성되었습니다!",
+
+            // PROCESS SETTINGS
+            process_settings: "처리 설정",
+            summary_language: "요약 언어",
+            summary_lang_hint: "요약을 어떤 언어로 원하십니까?",
+            transcript_language: "대본 언어",
+            transcript_lang_hint: "대본을 어떤 언어로 번역하시겠습니까?",
+            topic_sensitive: "주제 초점",
+            topic_hint: "초점 키워드 (예: 시험)",
+            topic_placeholder: "예: 기말고사, 프로젝트...",
+            original: "원본"
         }
     },
     // --- HINDI (HI) ---
@@ -852,8 +973,6 @@ const resources = {
             btn_cancel: "रद्द करें",
             btn_delete: "हटाएं",
             btn_yes: "हां",
-            
-            // AUTH
             login_title: "लॉग इन करें",
             register_title: "साइन अप करें",
             username_placeholder: "उपयोगकर्ता नाम",
@@ -866,7 +985,18 @@ const resources = {
             error_empty: "कृपया सभी फ़ील्ड भरें।",
             error_login_fail: "ईमेल या पासवर्ड गलत है।",
             success_login: "लॉगिन सफल!",
-            success_register: "खाता बनाया गया!"
+            success_register: "खाता बनाया गया!",
+
+            // PROCESS SETTINGS
+            process_settings: "प्रक्रिया सेटिंग्स",
+            summary_language: "सारांश भाषा",
+            summary_lang_hint: "आप सारांश किस भाषा में चाहते हैं?",
+            transcript_language: "प्रतिलेख भाषा",
+            transcript_lang_hint: "प्रतिलेख का किस भाषा में अनुवाद करें?",
+            topic_sensitive: "विषय फोकस",
+            topic_hint: "फोकस कीवर्ड (उदा: परीक्षा)",
+            topic_placeholder: "उदा: अंतिम परीक्षा, परियोजना...",
+            original: "मूल"
         }
     },
     // --- ARABIC (AR) ---
@@ -912,8 +1042,6 @@ const resources = {
             btn_cancel: "إلغاء",
             btn_delete: "حذف",
             btn_yes: "نعم",
-
-            // AUTH
             login_title: "تسجيل الدخول",
             register_title: "إنشاء حساب",
             username_placeholder: "اسم المستخدم",
@@ -926,7 +1054,18 @@ const resources = {
             error_empty: "يرجى ملء جميع الحقول.",
             error_login_fail: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
             success_login: "تم تسجيل الدخول بنجاح!",
-            success_register: "تم إنشاء الحساب!"
+            success_register: "تم إنشاء الحساب!",
+
+            // PROCESS SETTINGS
+            process_settings: "إعدادات المعالجة",
+            summary_language: "لغة الملخص",
+            summary_lang_hint: "بأي لغة تريد الملخص؟",
+            transcript_language: "لغة النص",
+            transcript_lang_hint: "ترجمة النص إلى أي لغة؟",
+            topic_sensitive: "التركيز على الموضوع",
+            topic_hint: "الكلمات الرئيسية للتركيز (مثال: امتحان)",
+            topic_placeholder: "مثال: الامتحان النهائي، المشروع...",
+            original: "أصلي"
         }
     },
     // --- INDONESIAN (ID) ---
@@ -972,8 +1111,6 @@ const resources = {
             btn_cancel: "Batal",
             btn_delete: "Hapus",
             btn_yes: "Ya",
-
-            // AUTH
             login_title: "Masuk",
             register_title: "Daftar",
             username_placeholder: "Nama Pengguna",
@@ -986,7 +1123,18 @@ const resources = {
             error_empty: "Harap isi semua kolom.",
             error_login_fail: "Email atau kata sandi salah.",
             success_login: "Login Berhasil!",
-            success_register: "Akun dibuat!"
+            success_register: "Akun dibuat!",
+
+            // PROCESS SETTINGS
+            process_settings: "Pengaturan Proses",
+            summary_language: "Bahasa Ringkasan",
+            summary_lang_hint: "Dalam bahasa apa Anda ingin ringkasan?",
+            transcript_language: "Bahasa Transkrip",
+            transcript_lang_hint: "Terjemahkan transkrip ke bahasa apa?",
+            topic_sensitive: "Fokus Topik",
+            topic_hint: "Kata kunci fokus (mis: Ujian)",
+            topic_placeholder: "mis: Ujian Akhir, Proyek...",
+            original: "Asli"
         }
     },
     // --- POLISH (PL) ---
@@ -1032,8 +1180,6 @@ const resources = {
             btn_cancel: "Anuluj",
             btn_delete: "Usuń",
             btn_yes: "Tak",
-
-            // AUTH
             login_title: "Zaloguj się",
             register_title: "Zarejestruj się",
             username_placeholder: "Nazwa użytkownika",
@@ -1046,7 +1192,18 @@ const resources = {
             error_empty: "Wypełnij wszystkie pola.",
             error_login_fail: "Błędny email lub hasło.",
             success_login: "Zalogowano pomyślnie!",
-            success_register: "Konto utworzone!"
+            success_register: "Konto utworzone!",
+
+            // PROCESS SETTINGS
+            process_settings: "Ustawienia Przetwarzania",
+            summary_language: "Język Podsumowania",
+            summary_lang_hint: "W jakim języku chcesz podsumowanie?",
+            transcript_language: "Język Transkrypcji",
+            transcript_lang_hint: "Przetłumacz transkrypcję na jaki język?",
+            topic_sensitive: "Fokus Tematyczny",
+            topic_hint: "Słowa kluczowe (np. Egzamin)",
+            topic_placeholder: "np. Egzamin Końcowy, Projekt...",
+            original: "Oryginał"
         }
     }
 };
