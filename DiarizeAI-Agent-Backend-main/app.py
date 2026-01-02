@@ -65,7 +65,7 @@ def create_app():
         # 1. Check if email already exists
         # 1. Email'in zaten kayıtlı olup olmadığını kontrol et
         if User.query.filter_by(email=email).first():
-            return jsonify({"error": "This email address is already registered."}), 400
+            return jsonify({"error": "Bu email adresi zaten kayıtlı."}), 400
         
         # 2. Generate unique username with tag (e.g. Efe#1234)
         # 2. Etiketli benzersiz kullanıcı adı oluştur (örn. Efe#1234)
@@ -91,13 +91,13 @@ def create_app():
             db.session.add(new_user)
             db.session.commit()
             return jsonify({
-                "message": "Registration successful.", 
+                "message": "Kayıt başarılı", 
                 "user_id": new_user.id,
                 "display_name": final_username 
             }), 201
         except Exception as e:
             db.session.rollback()
-            return jsonify({"error": f"Database error: {str(e)}"}), 500
+            return jsonify({"error": f"Veritabanı hatası: {str(e)}"}), 500
 
     @app.route("/auth/login", methods=["POST"])
     def login():
@@ -108,7 +108,7 @@ def create_app():
         data = request.get_json()
 
         if not data or "email" not in data or "password" not in data:
-            return jsonify({"error": "Email and password are required."}), 400
+            return jsonify({"error": "Email ve şifre gereklidir."}), 400
 
         email = data["email"]
         password = data["password"]
@@ -171,13 +171,32 @@ def create_app():
     @app.post("/api/jobs/<int:job_id>/run")
     def run_job(job_id: int):
         job = Job.query.get_or_404(job_id) 
+        
+        # 1. Get Settings from Request Body
+        # 1. İstek Gövdesinden Ayarları Al
+        data = request.get_json(silent=True) or {}
+        
+        # 2. Update Job with Settings
+        # 2. İşi Ayarlarla Güncelle
+        if "summaryLang" in data: job.summary_lang = data["summaryLang"]
+        if "transcriptLang" in data: job.transcript_lang = data["transcriptLang"]
+        if "keywords" in data: job.input_keywords = data["keywords"]
+        if "focusExclusive" in data: job.focus_exclusive = data["focusExclusive"]
+        
         try:
             job.status = "processing"
             job.error_message = None
             db.session.commit()
             
-            # Start pipeline
-            out = run_whisper_and_agent(job.audio_path)
+            # 3. Pass settings to Pipeline
+            # 3. Ayarları Pipeline'a Geçir
+            out = run_whisper_and_agent(
+                audio_path=job.audio_path,
+                summary_lang=job.summary_lang,
+                transcript_lang=job.transcript_lang,
+                keywords=job.input_keywords,
+                focus_exclusive=job.focus_exclusive
+            )
             
             job.conversation_type = out.get("conversation_type", "unknown")
             job.summary = out.get("summary", "unknown")
@@ -200,6 +219,8 @@ def create_app():
         
     @app.post("/api/jobs/<int:job_id>/rerun")
     def rerun_job(job_id: int):
+        # Re-run uses existing settings in DB
+        # Yeniden çalıştırma DB'deki mevcut ayarları kullanır
         return run_job(job_id)
 
     @app.get("/api/jobs/<int:job_id>")

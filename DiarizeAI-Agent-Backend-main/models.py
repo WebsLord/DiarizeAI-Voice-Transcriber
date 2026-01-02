@@ -24,31 +24,14 @@ class User(db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
-    
-    # Email must be unique and is used for login
-    # Email benzersiz olmalı ve giriş için kullanılır
     email = db.Column(db.String(120), unique=True, nullable=False)
-    
-    # Username with Tag (e.g., Efe#1234) for display
-    # Görüntüleme için Etiketli Kullanıcı Adı (örn. Efe#1234)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    
-    # Store the hashed password, never the plain text
-    # Şifrelenmiş (hash) şifreyi sakla, asla düz metni saklama
     password_hash = db.Column(db.String(256), nullable=False)
     
     def set_password(self, password):
-        """
-        Hashes the password and stores it.
-        Şifreyi hashler ve saklar.
-        """
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        """
-        Checks if the provided password matches the hash.
-        Sağlanan şifrenin hash ile eşleşip eşleşmediğini kontrol eder.
-        """
         return check_password_hash(self.password_hash, password)
 
 class Job(db.Model): 
@@ -63,15 +46,20 @@ class Job(db.Model):
     conversation_type = db.Column(db.Text, nullable=True)
     summary = db.Column(db.Text, nullable=True)
     
+    # Detected language by Whisper
     language = db.Column(db.Text, nullable=True)
     clean_transcript = db.Column(db.Text, nullable=True)
-    keypoints_json = db.Column(db.Text, nullable=True)   # list -> json string
-    status = db.Column(db.Text, nullable=False, default='uploaded')  # uploaded|processing|done|error
+    keypoints_json = db.Column(db.Text, nullable=True)
+    status = db.Column(db.Text, nullable=False, default='uploaded')
     error_message = db.Column(db.Text, nullable=True)
-    
-    # Counter for how many times the pipeline ran for this job
-    # Bu iş için pipeline'ın kaç kez çalıştığını gösteren sayaç
     run_count = db.Column(db.Integer, nullable=False, default=0) 
+
+    # --- NEW FIELDS FOR PROMPT ENGINEERING ---
+    # --- PROMPT MÜHENDİSLİĞİ İÇİN YENİ ALANLAR ---
+    summary_lang = db.Column(db.String(10), default="original") # tr, en, original
+    transcript_lang = db.Column(db.String(10), default="original")
+    input_keywords = db.Column(db.Text, nullable=True) # "Exam // Final"
+    focus_exclusive = db.Column(db.Boolean, default=False) # Only focus on keywords?
 
     created_at = db.Column(
         db.DateTime, nullable=False,
@@ -96,6 +84,11 @@ class Job(db.Model):
                 "status": self.status,
                 "error_message": self.error_message,
                 "run_count": self.run_count,
+                # Include new fields in response / Yeni alanları yanıta dahil et
+                "summary_lang": self.summary_lang,
+                "transcript_lang": self.transcript_lang,
+                "input_keywords": self.input_keywords,
+                "focus_exclusive": self.focus_exclusive,
                 "created_at": self.created_at.isoformat() if self.created_at else None,
                 "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             }
