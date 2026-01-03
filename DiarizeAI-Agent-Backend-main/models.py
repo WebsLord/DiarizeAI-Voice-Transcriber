@@ -50,6 +50,13 @@ class Job(db.Model):
     language = db.Column(db.Text, nullable=True)
     clean_transcript = db.Column(db.Text, nullable=True)
     keypoints_json = db.Column(db.Text, nullable=True)
+    
+    # --- NEW: Segments JSON for Karaoke Mode ---
+    # --- YENİ: Karaoke Modu için Segment JSON'ı ---
+    # Stores detailed list: [{start, end, speaker, text}, ...]
+    # Detaylı listeyi saklar: [{start, end, speaker, text}, ...]
+    segments_json = db.Column(db.Text, nullable=True)
+
     status = db.Column(db.Text, nullable=False, default='uploaded')
     error_message = db.Column(db.Text, nullable=True)
     run_count = db.Column(db.Integer, nullable=False, default=0) 
@@ -81,10 +88,13 @@ class Job(db.Model):
                 "keypoints": None if not self.keypoints_json else json.loads(self.keypoints_json),
                 "language": self.language,
                 "clean_transcript": self.clean_transcript,
+                
+                # Return segments to frontend / Segmentleri frontend'e döndür
+                "segments": None if not self.segments_json else json.loads(self.segments_json),
+                
                 "status": self.status,
                 "error_message": self.error_message,
                 "run_count": self.run_count,
-                # Include new fields in response / Yeni alanları yanıta dahil et
                 "summary_lang": self.summary_lang,
                 "transcript_lang": self.transcript_lang,
                 "input_keywords": self.input_keywords,

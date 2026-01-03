@@ -19,8 +19,7 @@ def run_whisper_and_agent(
         audio_path (str): The path to the audio file.
         summary_lang (str): Language code for summary (e.g., 'tr', 'en').
         transcript_lang (str): Language code for transcript translation.
-        keywords (str): Focus keywords separated by //.
-        focus_exclusive (bool): If True, only focus on keywords.
+        keywords (str): Focus keywords separated by //.\n        focus_exclusive (bool): If True, only focus on keywords.
 
     Returns:
         Dict[str, Any]: The analysis result from Gemini.
