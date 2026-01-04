@@ -16,11 +16,10 @@ from pydantic import BaseModel, Field, ValidationError
 class SegmentItem(BaseModel):
     start: float = Field(..., description="Start time in seconds")
     end: float = Field(..., description="End time in seconds")
-    speaker: str = Field(..., description="Speaker label (e.g., Speaker01, Ahmet Hoca)")
+    speaker: str = Field(..., description="Real Name (e.g. Erdem) or Speaker Label (e.g. Speaker 1)")
     text: str = Field(..., description="Corrected/Translated text content")
 
 class StructuredSummary(BaseModel):
-    # KORKMA: Buradaki 'conversation_type' senin ekrandaki 'Tür' kutucuğun. SİLİNMEDİ.
     conversation_type: str = Field(
         ...,
         description="meeting | university_lecture | phone_call | interview | other"
@@ -28,13 +27,12 @@ class StructuredSummary(BaseModel):
     summary: str = Field(..., description="Overall summary")
     keypoints: List[str] = Field(default_factory=list, description="3–10 key bullet points")
     
-    # --- YENİ: Karaoke için Segment Listesi ---
+    # Karaoke Modu için Segment Listesi
     segments: List[SegmentItem] = Field(
         default_factory=list, 
-        description="List of detailed segments with timestamps and speaker labels"
+        description="List of segments with REAL NAMES and corrected text"
     )
     
-    # KORKMA: 'metadata' içindeki 'language', senin ekrandaki 'Dil' kutucuğun. SİLİNMEDİ.
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Extra info, includes language, clean_transcript")
 
 
@@ -65,7 +63,7 @@ def _safe_json_loads(raw_text: str) -> Dict[str, Any]:
 
 
 # -----------------------------
-# 3) AGGRESSIVE PROMPT ENGINEERING
+# 3) AGGRESSIVE PROMPT ENGINEERING (CONTEXT-AWARE NAMING)
 # -----------------------------
 def _build_prompt(
     segments: List[Dict[str, Any]],
@@ -75,6 +73,7 @@ def _build_prompt(
     focus_exclusive: bool = False
 ) -> str:
     
+    # Segmentleri JSON stringe çevir
     segments_json = json.dumps(segments, ensure_ascii=False)
 
     # Dil Haritası
@@ -100,9 +99,9 @@ def _build_prompt(
     # 1. Özet Dili
     if summary_lang and summary_lang.lower() != "original":
         summary_instruction = (
-            f"*** CRITICAL INSTRUCTION ***\n"
+            f"*** CRITICAL LANGUAGE RULE ***\n"
             f"You MUST write the 'summary' and 'keypoints' ONLY in {target_sum_lang_name}.\n"
-            f"Even if the audio is in Turkish or another language, you MUST TRANSLATE your output to {target_sum_lang_name}."
+            f"Translate the summary to {target_sum_lang_name} even if the audio is different."
         )
     else:
         summary_instruction = "Write the summary and keypoints in the SAME language as the audio."
@@ -110,7 +109,7 @@ def _build_prompt(
     # 2. Transkript Dili
     if transcript_lang and transcript_lang.lower() != "original":
         transcript_instruction = (
-            f"Translate the 'text' field of each segment AND the 'clean_transcript' fully into {target_trans_lang_name}."
+            f"Translate the 'text' field of segments AND the 'clean_transcript' fully into {target_trans_lang_name}."
         )
     else:
         transcript_instruction = "Keep the 'text' fields in original language, fixing grammar/spelling."
@@ -120,43 +119,47 @@ def _build_prompt(
     if keywords:
         focus_instruction = f"\nFOCUS KEYWORDS: {keywords}\n"
         if focus_exclusive:
-            focus_instruction += "IGNORE all topics unrelated to the keywords in the SUMMARY. However, KEEP ALL SEGMENTS in the transcript.\n"
+            focus_instruction += "IGNORE topics unrelated to keywords in the SUMMARY. But KEEP ALL SEGMENTS in transcript.\n"
         else:
             focus_instruction += "Highlight these keywords in the summary.\n"
 
     
-    # --- PROMPT ---
+    # --- PROMPT (The Brain) ---
     task = f"""
-You are an advanced AI Audio Analyst and TRANSLATOR.
+You are an expert AI Audio Analyst.
 
-INPUT DATA (Whisper Segments):
+INPUT DATA (Segments with timestamps and potential Speaker Labels):
 {segments_json}
 
---- SYSTEM RULES (FOLLOW STRICTLY) ---
+--- YOUR CORE TASKS ---
 1. {summary_instruction}
 2. {transcript_instruction}
 3. {focus_instruction}
-4. **IMPORTANT DIARIZATION RULES**:
-   - You MUST identify speakers (e.g., "Speaker 1", "Speaker 2") based on the flow.
-   - In the 'segments' list, fill the "speaker" field.
-   - In the 'clean_transcript' string, YOU MUST PREPEND THE SPEAKER NAME to every turn.
-     Example: "Speaker 1: Hello how are you?\\nSpeaker 2: I am fine."
+
+4. **INTELLIGENT SPEAKER NAMING (CRITICAL)**:
+   - The input segments may already have labels like "SPEAKER_00", "SPEAKER_01".
+   - **YOUR GOAL**: Identify the REAL NAMES of these speakers from the conversation context.
+   - **LOGIC**: If "SPEAKER_00" says "Hello Erdem", then "SPEAKER_01" is likely "Erdem".
+   - **ACTION**: Replace ALL instances of "SPEAKER_XX" with the detected Real Name (e.g. "Erdem", "Ahmet Hoca").
+   - If you cannot find a name, keep "Speaker 1", "Speaker 2" etc.
+   - **PRESERVE TIMESTAMPS**: Do not change the 'start' and 'end' values.
 
 --- REQUIRED JSON OUTPUT FORMAT ---
 {{
-  "conversation_type": "meeting | lecture | call | interview | other",
-  "summary": "Summary in target language",
+  "conversation_type": "meeting | lecture | interview | other",
+  "summary": "Summary string...",
   "keypoints": ["Point 1", "Point 2"],
   "segments": [
-    {{ "start": 0.0, "end": 2.5, "speaker": "Speaker 1", "text": "Text..." }}
+    {{ "start": 0.0, "end": 2.5, "speaker": "Erdem", "text": "Text..." }},
+    {{ "start": 2.5, "end": 5.0, "speaker": "Ahmet", "text": "Text..." }}
   ],
   "metadata": {{
-    "language": "Detected language",
-    "clean_transcript": "Full transcript WITH SPEAKER NAMES (e.g. 'Speaker 1: ...') at the start of each line."
+    "language": "Detected language code",
+    "clean_transcript": "Full transcript text formatted as:\\nErdem: Text...\\nAhmet: Text..."
   }}
 }}
 
-Take a deep breath. Ensure 'clean_transcript' has speaker labels.
+Take a deep breath. Analyze context. Reveal the real names.
 """.strip()
 
     return task
@@ -193,10 +196,9 @@ def analyze_audio_segments_with_gemini(
         focus_exclusive=focus_exclusive
     )
 
-    print(f"\n🚀 PROMPT SETTINGS SENT TO AI:")
-    print(f"   Summary Target: {summary_lang}")
-    print(f"   Transcript Target: {transcript_lang}")
-    print(f"   Keywords: {keywords}\n")
+    print(f"\n🚀 PROMPT SENT TO AI (Context-Aware Naming Active):")
+    print(f"   Target Summary Lang: {summary_lang}")
+    print(f"   Target Transcript Lang: {transcript_lang}")
 
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -244,14 +246,15 @@ def analyze_audio_segments_with_gemini(
     raise RuntimeError(f"Analysis failed: {last_error}")
 
 if __name__ == "__main__":
-    print("--- Running Test ---")
+    print("--- Running Smart Naming Test ---")
+    # Simulating Pyannote Output (SPEAKER_XX labels)
     test_segments = [
-        {"start": 0.0, "end": 2.0, "text": "Merhaba nasılsın?"},
-        {"start": 2.0, "end": 4.0, "text": "İyiyim sen nasılsın?"},
+        {"start": 0.0, "end": 2.0, "speaker": "SPEAKER_00", "text": "Merhaba Erdem, nasılsın?"},
+        {"start": 2.0, "end": 4.0, "speaker": "SPEAKER_01", "text": "İyiyim Ahmet, sen nasılsın?"},
     ]
     result = analyze_audio_segments_with_gemini(
         test_segments, 
-        summary_lang="original", 
+        summary_lang="tr", 
         keywords="",
         focus_exclusive=False
     )
