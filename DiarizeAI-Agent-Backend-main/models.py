@@ -51,11 +51,13 @@ class Job(db.Model):
     clean_transcript = db.Column(db.Text, nullable=True)
     keypoints_json = db.Column(db.Text, nullable=True)
     
-    # --- NEW: Segments JSON for Karaoke Mode ---
-    # --- YENİ: Karaoke Modu için Segment JSON'ı ---
+    # --- FIX: SEGMENTS COLUMN (JSON TYPE) ---
+    # --- DÜZELTME: SEGMENT SÜTUNU (JSON TİPİ) ---
     # Stores detailed list: [{start, end, speaker, text}, ...]
     # Detaylı listeyi saklar: [{start, end, speaker, text}, ...]
-    segments_json = db.Column(db.Text, nullable=True)
+    # app.py tries to save to 'job.segments', so we must name it 'segments'.
+    # app.py 'job.segments'e kaydetmeye çalıştığı için adını 'segments' koymalıyız.
+    segments = db.Column(db.JSON, nullable=True)
 
     status = db.Column(db.Text, nullable=False, default='uploaded')
     error_message = db.Column(db.Text, nullable=True)
@@ -89,8 +91,9 @@ class Job(db.Model):
                 "language": self.language,
                 "clean_transcript": self.clean_transcript,
                 
-                # Return segments to frontend / Segmentleri frontend'e döndür
-                "segments": None if not self.segments_json else json.loads(self.segments_json),
+                # Return segments directly (SQLAlchemy handles JSON)
+                # Segmentleri doğrudan döndür (SQLAlchemy JSON'u halleder)
+                "segments": self.segments,
                 
                 "status": self.status,
                 "error_message": self.error_message,

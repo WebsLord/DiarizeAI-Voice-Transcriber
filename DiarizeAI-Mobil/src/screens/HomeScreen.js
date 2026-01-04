@@ -42,7 +42,8 @@ export default function HomeScreen({ navigation }) {
       isPlaying, playingId, savedRecordings,
       startRecording, stopRecording, pauseRecording, resumeRecording, discardRecording,
       playSound, stopSound, saveRecordingToDevice, deleteRecording, clearAllRecordings,
-      pickFile, loadFromLibrary, clearSelection, shareFile, shareFileUri, renameRecording
+      pickFile, loadFromLibrary, clearSelection, shareFile, shareFileUri, renameRecording,
+      isFileSaved // --- NEW: Get Saved Status from Hook --- / --- YENİ: Kayıt Durumunu Hook'tan Al ---
   } = useAudioLogic();
 
   // UI States
@@ -132,6 +133,15 @@ export default function HomeScreen({ navigation }) {
   const handleRecordPress = () => { startRecording(); }; 
   
   const handleProcessPress = async () => {
+    // --- TRAFFIC LIGHT CHECK ---
+    // --- TRAFİK IŞIĞI KONTROLÜ ---
+    // Prevent processing if file is not saved locally
+    // Dosya yerel olarak kaydedilmediyse işlemeyi engelle
+    if (!isFileSaved) {
+        Alert.alert(t('alert_error'), "Lütfen işlem yapmadan önce dosyayı kaydedin.");
+        return;
+    }
+
     if (!selectedFile || !selectedFile.uri) {
         Alert.alert(t('alert_error'), "Lütfen önce ses kaydedin veya seçin.");
         return;
@@ -248,7 +258,7 @@ export default function HomeScreen({ navigation }) {
           fontScale={fontScale}
       />
 
-      {/* CONTROLS: Passed settings handler */}
+      {/* CONTROLS: Passed settings handler AND saved status */}
       <Controls 
           selectedFile={selectedFile} 
           isRecording={isRecording} isPaused={isPaused} isProcessing={isProcessing} 
@@ -258,6 +268,7 @@ export default function HomeScreen({ navigation }) {
           stopRecording={stopRecording} handleRecordPress={handleRecordPress}
           fontScale={fontScale}
           onSettingsPress={() => setIsProcessSettingsVisible(true)} // OPEN SETTINGS
+          isFileSaved={isFileSaved} // PASS SAVED STATUS TO CONTROLS
       />
 
       {isProcessing && (

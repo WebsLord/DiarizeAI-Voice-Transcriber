@@ -14,7 +14,8 @@ export default function ResultScreen({ route, navigation }) {
   const { data } = route.params || {};
 
   // --- AUDIO REFS & STATES ---
-  // Ses nesnesini referans olarak tutuyoruz ki sayfa kapanınca kaybolmasın, kontrol edebilelim.
+  // KRİTİK: Sound nesnesini state yerine Ref içinde de tutuyoruz.
+  // Bu, sayfadan çıkarken "ses yokmuş gibi" davranan hatayı %100 çözer.
   const soundRef = useRef(null); 
   
   const [isPlaying, setIsPlaying] = useState(false);
@@ -38,53 +39,32 @@ export default function ResultScreen({ route, navigation }) {
     );
   }
 
-  // --- 2. VERİ HAZIRLIĞI (KURŞUN GEÇİRMEZ PARSE) ---
-  // Bu kısım, backend'den gelen karmaşık veriyi düzeltip telefona "Al sana temiz liste" der.
+  // --- 2. VERİ HAZIRLIĞI (Parsing) ---
+  // Segmentleri her saniye tekrar hesaplamamak için en başta "temizliyoruz".
+  // Bu sayede "start" ve "end" değerlerinin KESİN SAYI olduğundan emin oluyoruz.
   const processedSegments = useMemo(() => {
     let rawSegments = [];
-    
-    // BACKEND'DEN GELEN OLASI TÜM YOLLARI DENE
-    let source = 
-        data.segments || 
-        data.segments_json || 
-        data.transcript_segments ||
-        (data.result ? data.result.segments : null);
-
     try {
-        if (!source) return []; 
-
-        // Durum 1: Veri String ise (JSON.parse gerekir)
-        if (typeof source === 'string') {
-            rawSegments = JSON.parse(source);
-            // Double parse check (String içinde string JSON varsa)
-            if (typeof rawSegments === 'string') rawSegments = JSON.parse(rawSegments);
-        } 
-        else {
-            rawSegments = source;
+        if (data.segments) {
+            rawSegments = typeof data.segments === 'string' ? JSON.parse(data.segments) : data.segments;
+        } else if (data.segments_json) {
+            rawSegments = typeof data.segments_json === 'string' ? JSON.parse(data.segments_json) : data.segments_json;
         }
-
-        if (!Array.isArray(rawSegments)) return [];
-
-        // Her segmentin start/end değerlerini sayıya çevir (ÖNEMLİ!)
-        return rawSegments.map(seg => ({
-            ...seg,
-            start: parseFloat(seg.start || seg.start_time || 0), 
-            end: parseFloat(seg.end || seg.end_time || 0)
-        }));
-
     } catch (e) {
-        console.log("Segment parse hatası:", e);
-        return [];
+        console.log("Segment parse error:", e);
     }
+
+    // Hepsini sayıya çevir ve garanti altına al
+    return rawSegments.map(seg => ({
+        ...seg,
+        start: parseFloat(seg.start),
+        end: parseFloat(seg.end)
+    }));
   }, [data]);
 
   const keypoints = useMemo(() => {
     try {
-        if (!data.keypoints && !data.keypoints_json) return [];
-        let src = data.keypoints_json || data.keypoints;
-        let points = typeof src === 'string' ? JSON.parse(src) : src;
-        if (typeof points === 'string') points = JSON.parse(points);
-        return Array.isArray(points) ? points : [];
+        return typeof data.keypoints_json === 'string' ? JSON.parse(data.keypoints_json) : (data.keypoints || []);
     } catch (e) { return []; }
   }, [data]);
 
@@ -145,6 +125,8 @@ export default function ResultScreen({ route, navigation }) {
 
       // HEM REF HEM STATE GÜNCELLE
       soundRef.current = newSound; 
+      // setSound(newSound); // State'e gerek bile yok aslında, Ref yetiyor ama UI için kalsın.
+
       setDuration(status.durationMillis);
 
       // Karaoke için çok hızlı güncelleme (50ms)
@@ -221,13 +203,12 @@ export default function ResultScreen({ route, navigation }) {
           const pickedDuration = status.durationMillis / 1000; 
           await tempSound.unloadAsync();
 
-          // Basit tolerans kontrolü
           const lastSegment = processedSegments.length > 0 ? processedSegments[processedSegments.length - 1] : null;
           const expectedDuration = lastSegment ? lastSegment.end : 0;
 
           if (expectedDuration > 0 && Math.abs(pickedDuration - expectedDuration) > 10) {
-               // Kullanıcıyı uyar ama engelleme (Esneklik)
-              Alert.alert("Uyarı", "Süre biraz farklı görünüyor ama yine de yüklüyorum.");
+              Alert.alert("Hatalı Dosya", `Süre uyuşmuyor. Beklenen: ~${Math.floor(expectedDuration)}sn, Seçilen: ${Math.floor(pickedDuration)}sn`);
+              return; 
           }
           await performRelink(pickedFile);
       } catch (error) {
@@ -399,7 +380,6 @@ export default function ResultScreen({ route, navigation }) {
   );
 }
 
-// STİLLER SENİN ORİJİNAL DOSYANDAN BİREBİR KOPYALANDI
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212' },
   scrollContent: { padding: 20, paddingBottom: 50 },

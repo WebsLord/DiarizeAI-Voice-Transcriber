@@ -1,4 +1,4 @@
-# pipeline.py
+# pipeline.py (DEBUG SÜRÜMÜ)
 
 from typing import Dict, Any, List
 from diarize_agent.agent import analyze_audio_segments_with_gemini
@@ -11,45 +11,49 @@ def run_whisper_and_agent(
     keywords: str = None,
     focus_exclusive: bool = False
 ) -> Dict[str, Any]:
-    """
-    Transcribes the audio file and analyzes the segments using Gemini with custom settings.
-    Ses dosyasını transkribe eder ve segmentleri özel ayarlarla Gemini kullanarak analiz eder.
+    
+    print(f"\n--- 🔍 DEBUG BAŞLIYOR: {audio_path} ---")
 
-    Args:
-        audio_path (str): The path to the audio file.
-        summary_lang (str): Language code for summary (e.g., 'tr', 'en').
-        transcript_lang (str): Language code for transcript translation.
-        keywords (str): Focus keywords separated by //.\n        focus_exclusive (bool): If True, only focus on keywords.
-
-    Returns:
-        Dict[str, Any]: The analysis result from Gemini.
-    """
-    # 1. Transcribe the audio file
     # 1. Ses dosyasını transkribe et
+    print("🎤 Whisper çalışıyor...")
     transcription = transcribe_audio_with_whisper(audio_path)
     
-    # --- CRITICAL FIX: Extract 'segments' list if transcription is a dictionary ---
-    # --- KRİTİK DÜZELTME: Eğer transkripsiyon bir sözlükse 'segments' listesini çıkar ---
+    # DEBUG: Whisper ne döndürdü?
+    print(f"🎤 Whisper Sonucu Tipi: {type(transcription)}")
+
+    # 2. Segmentleri ayıkla
+    segments_to_process = []
+    
     if isinstance(transcription, dict) and "segments" in transcription:
         segments_to_process = transcription["segments"]
-    else:
-        # If it's already a list or other format, use as is
-        # Zaten listeyse veya başka bir format ise olduğu gibi kullan
+        print("✅ Whisper 'Dictionary' döndürdü ve 'segments' anahtarı var.")
+    elif isinstance(transcription, list):
         segments_to_process = transcription
+        print("✅ Whisper direkt 'List' döndürdü.")
+    else:
+        print(f"⚠️ WHISPER SEGMENT BULAMADI! Gelen veri: {transcription}")
+        segments_to_process = [] # Patlamaması için boş liste
 
-    # 2. Analyze with Gemini, passing user preferences
-    # 2. Kullanıcı tercihlerini ileterek Gemini ile analiz et
-    
-    # Debug log in English
-    # İngilizce hata ayıklama logu
-    print(f"🤖 AGENT RUNNING -> Lang: {summary_lang}, Keywords: {keywords}, Exclusive: {focus_exclusive}")
+    # Segment sayısını yazdır
+    count = len(segments_to_process) if segments_to_process else 0
+    print(f"📊 İşlenecek Segment Sayısı: {count}")
+
+    # 3. Gemini Analizi
+    print(f"🤖 Gemini Ajanı Çalışıyor -> Dil: {summary_lang}")
     
     analysis_result = analyze_audio_segments_with_gemini(
-        segments=segments_to_process, # Sending the correct list / Doğru listeyi gönderiyoruz
+        segments=segments_to_process, 
         summary_lang=summary_lang,
         transcript_lang=transcript_lang,
         keywords=keywords,
         focus_exclusive=focus_exclusive
     )
     
+    # --- KRİTİK DÜZELTME: SEGMENTLERİ ZORLA EKLE ---
+    if isinstance(analysis_result, dict):
+        # Eğer segment listesi boşsa bile (None değil) boş liste olarak gönderelim ki 'null' hatası almayalım.
+        analysis_result["segments"] = segments_to_process if segments_to_process is not None else []
+        print(f"📦 Pakete Segmentler Eklendi. (Uzunluk: {len(analysis_result['segments'])})")
+    
+    print("--- ✅ DEBUG BİTTİ ---\n")
     return analysis_result

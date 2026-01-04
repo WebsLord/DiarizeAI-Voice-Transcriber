@@ -11,12 +11,9 @@ from models import db, Job, User
 from pipeline import run_whisper_and_agent
 
 # Function to check allowed file extensions
-# İzin verilen dosya uzantılarını kontrol eden fonksiyon
 def allowed_file(filename: str, allowed: set[str]) -> bool:
     if "." not in filename:
         return False
-    # Split by the last dot to get extension
-    # Uzantıyı almak için son noktadan böl
     ext = filename.rsplit(".", 1)[1].lower()
     if ext in allowed:
         return True
@@ -24,7 +21,6 @@ def allowed_file(filename: str, allowed: set[str]) -> bool:
         return False
 
 # Function to create the Flask app instance
-# Flask uygulama örneğini oluşturan fonksiyon
 def create_app():
     app = Flask(__name__) 
     app.config.from_object(Config) 
@@ -35,10 +31,7 @@ def create_app():
     db.init_app(app) 
     
     with app.app_context():
-        # WARNING: Since we changed the User model (added email), 
-        # existing tables might conflict. Ideally, delete the old .db file or migrate.
-        # UYARI: User modelini değiştirdiğimiz için (email eklendi),
-        # mevcut tablolar çakışabilir. İdeal olarak eski .db dosyasını silin.
+        # UYARI: Tablo çakışması olursa eski .db dosyasını silin.
         db.create_all() 
     
     # ---------------------------------------------------------
@@ -47,14 +40,7 @@ def create_app():
 
     @app.route("/auth/register", methods=["POST"])
     def register():
-        """
-        Register a new user with Email and generate unique Username#Tag.
-        Email ile yeni kullanıcı kaydet ve benzersiz KullanıcıAdı#Etiket oluştur.
-        """
         data = request.get_json()
-        
-        # We need email, password and a base username (display name)
-        # Email, şifre ve temel kullanıcı adına (görünen ad) ihtiyacımız var
         if not data or "email" not in data or "password" not in data or "username" not in data:
             return jsonify({"error": "Email, Username, and Password are required."}), 400
         
@@ -62,13 +48,9 @@ def create_app():
         base_username = data["username"] 
         password = data["password"]
 
-        # 1. Check if email already exists
-        # 1. Email'in zaten kayıtlı olup olmadığını kontrol et
         if User.query.filter_by(email=email).first():
             return jsonify({"error": "This email address is already registered."}), 400
         
-        # 2. Generate unique username with tag (e.g. Efe#1234)
-        # 2. Etiketli benzersiz kullanıcı adı oluştur (örn. Efe#1234)
         final_username = None
         for _ in range(5):
             tag = f"{random.randint(1000, 9999)}" 
@@ -80,8 +62,6 @@ def create_app():
         if not final_username:
             final_username = f"{base_username}#{uuid.uuid4().hex[:4]}"
 
-        # 3. Create user
-        # 3. Kullanıcıyı oluştur
         new_user = User(email=email, username=final_username)
         new_user.set_password(password)
         
@@ -99,20 +79,13 @@ def create_app():
 
     @app.route("/auth/login", methods=["POST"])
     def login():
-        """
-        Login with Email and Password.
-        Email ve Şifre ile giriş yap.
-        """
         data = request.get_json()
-
         if not data or "email" not in data or "password" not in data:
             return jsonify({"error": "Email and password are required."}), 400
 
         email = data["email"]
         password = data["password"]
 
-        # Find user by EMAIL
-        # Kullanıcıyı EMAIL ile bul
         user = User.query.filter_by(email=email).first()
 
         if user and user.check_password(password):
@@ -140,8 +113,6 @@ def create_app():
         if not f.filename:
             return jsonify({"error": "Filename is blank"}), 400
         
-        # Check against allowed extensions
-        # İzin verilen uzantılara karşı kontrol et
         if not allowed_file(f.filename, app.config["ALLOWED_EXTENSIONS"]):
             return jsonify({"error": "Not allowed file type"}), 400
             
@@ -167,50 +138,28 @@ def create_app():
     def run_job(job_id: int):
         job = Job.query.get_or_404(job_id) 
         
-        # 1. Get Settings from Request Body (Bulletproof Mode)
-        # Try getting JSON first, then Form Data, then Query Args.
-        # 1. İstek Gövdesinden Ayarları Al (Kurşun Geçirmez Mod)
-        # Önce JSON, sonra Form Data, sonra Query Args dene.
         data = request.get_json(silent=True) or request.form.to_dict() or request.args.to_dict() or {}
-        
-        # --- DEBUG LOG ---
         print(f"🌍 INCOMING FRONTEND DATA (RAW): {data}")
-        # -----------------
 
-        # 2. Update Job with Settings (Check for both camelCase and snake_case)
-        # 2. İşi Ayarlarla Güncelle (Hem camelCase hem snake_case kontrolü)
-        
-        # Check for Summary Language / Özet Dili Kontrolü
         val_summary = data.get("summaryLang") or data.get("summary_lang")
-        if val_summary:
-            job.summary_lang = val_summary
+        if val_summary: job.summary_lang = val_summary
             
-        # Check for Transcript Language / Transkript Dili Kontrolü
         val_transcript = data.get("transcriptLang") or data.get("transcript_lang")
-        if val_transcript:
-            job.transcript_lang = val_transcript
+        if val_transcript: job.transcript_lang = val_transcript
             
-        # Check for Keywords / Anahtar Kelime Kontrolü
         val_keywords = data.get("keywords") or data.get("input_keywords")
-        if val_keywords:
-            job.input_keywords = val_keywords
+        if val_keywords: job.input_keywords = val_keywords
             
-        # Check for Exclusive Focus / Odak Modu Kontrolü
         val_exclusive = data.get("focusExclusive") or data.get("focus_exclusive")
-        # Handle string "true"/"false" from Form Data if necessary
-        # Gerekirse Form Data'dan gelen string "true"/"false" değerlerini işle
-        if str(val_exclusive).lower() == "true":
-            job.focus_exclusive = True
-        elif str(val_exclusive).lower() == "false":
-            job.focus_exclusive = False
+        if str(val_exclusive).lower() == "true": job.focus_exclusive = True
+        elif str(val_exclusive).lower() == "false": job.focus_exclusive = False
         
         try:
             job.status = "processing"
             job.error_message = None
             db.session.commit()
             
-            # 3. Pass settings to Pipeline Explicitly
-            # 3. Ayarları Pipeline'a Açıkça Geçir
+            # PIPELINE ÇALIŞTIRILIYOR
             out = run_whisper_and_agent(
                 audio_path=job.audio_path,
                 summary_lang=job.summary_lang,
@@ -223,6 +172,16 @@ def create_app():
             job.summary = out.get("summary", "unknown")
             job.keypoints_json = json.dumps(out.get("keypoints", []), ensure_ascii=False)
             
+            # --- FIX: SEGMENTLERİ YAKALA VE KAYDET ---
+            # Pipeline'dan gelen veriyi al
+            segments_data = out.get("segments", []) or out.get("transcript_segments", [])
+            
+            # Veritabanına yazmayı dene (Sütun varsa yazar, yoksa devam eder)
+            try:
+                job.segments = segments_data
+            except:
+                pass 
+            
             md = out.get("metadata") or {}
             job.language = md.get("language")
             job.clean_transcript = md.get("clean_transcript")
@@ -230,13 +189,16 @@ def create_app():
             job.status = "done"
             job.run_count += 1
             db.session.commit()
-            return jsonify(job.to_dict())
+
+            # --- CRITICAL FIX: TELEFONA GİDEN PAKETE ZORLA EKLE ---
+            # Veritabanında kaybolsa bile burada JSON içine elle koyuyoruz.
+            response_payload = job.to_dict()
+            response_payload['segments'] = segments_data 
+            
+            return jsonify(response_payload)
 
         except Exception as e:
-            # Print error to terminal in English
-            # Terminale hatayı İngilizce yazdır
             print(f"❌ ERROR DURING PROCESSING: {str(e)}")
-            
             job.status = "error"
             job.error_message = str(e)
             job.run_count += 1

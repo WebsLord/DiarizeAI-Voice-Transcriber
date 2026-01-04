@@ -1,3 +1,5 @@
+// src/hooks/useAudioLogic.js
+
 import { useState, useEffect } from 'react';
 import { Alert, Platform } from 'react-native'; // Platform added / Platform eklendi
 import { Audio } from 'expo-av';
@@ -39,6 +41,10 @@ export const useAudioLogic = () => {
     const [playingId, setPlayingId] = useState(null);
     const [savedRecordings, setSavedRecordings] = useState([]);
 
+    // --- NEW: Check if file is saved ---
+    // --- YENİ: Dosyanın kayıtlı olup olmadığını kontrol et ---
+    const [isFileSaved, setIsFileSaved] = useState(false);
+
     useEffect(() => {
         loadRecordings();
         return () => { 
@@ -48,6 +54,22 @@ export const useAudioLogic = () => {
             }
         };
     }, []);
+
+    // --- NEW: Update isFileSaved Logic ---
+    // --- YENİ: isFileSaved Durumunu Güncelleme Mantığı ---
+    useEffect(() => {
+        if (!selectedFile) {
+            setIsFileSaved(false);
+            return;
+        }
+        // Check if selected file URI matches any saved recording URI
+        // Seçilen dosya URI'sinin herhangi bir kayıtlı kayıt URI'si ile eşleşip eşleşmediğini kontrol et
+        const exists = savedRecordings.some(rec => 
+            rec.uri === selectedFile.uri || 
+            getActiveUri(rec.uri) === selectedFile.uri
+        );
+        setIsFileSaved(exists);
+    }, [selectedFile, savedRecordings]);
 
     // --- HELPER FUNCTIONS ---
     // --- YARDIMCI FONKSİYONLAR ---
@@ -299,9 +321,14 @@ export const useAudioLogic = () => {
             setSavedRecordings(updatedList);
             await saveSecurely(updatedList);
             
+            // --- UPDATE SELECTED FILE TO TRIGGER 'SAVED' STATE ---
+            // --- 'KAYDEDİLDİ' DURUMUNU TETİKLEMEK İÇİN SEÇİLİ DOSYAYI GÜNCELLE ---
+            setSelectedFile({ ...selectedFile, uri: newPath });
+
             Alert.alert("Success", "Saved (Encrypted) to library!");
             setMetering([]);
-            setSelectedFile(null);
+            // Do NOT clear selectedFile here, keep it so user can process it immediately
+            // Burada selectedFile'ı TEMİZLEME, böylece kullanıcı hemen işleyebilir
         } catch (error) { 
             console.error(error);
             Alert.alert("Error", "Save failed: " + error.message); 
@@ -517,6 +544,7 @@ export const useAudioLogic = () => {
         clearAllRecordings,
         pickFile, loadFromLibrary, clearSelection, shareFile, 
         shareFileUri, 
-        renameRecording
+        renameRecording,
+        isFileSaved // --- EXPORT NEW STATE --- / --- YENİ DURUMU DIŞA AKTAR ---
     };
 };
