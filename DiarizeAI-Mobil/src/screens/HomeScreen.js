@@ -311,7 +311,7 @@ export default function HomeScreen({ navigation }) {
         visible={isSettingsVisible} onClose={() => setIsSettingsVisible(false)}
         recordings={savedRecordings} recordCount={savedRecordings.length}
         onClearAll={() => { clearAllRecordings(); setIsSettingsVisible(false); }}
-        fontScale={fontScale} onChangeFontScale={changeFontScale}
+        fontScale={fontScale} onChangeFontScale={changeFontScale}onDeleteRecording={deleteRecording}
       />
     </SafeAreaView>
   );

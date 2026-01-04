@@ -10,32 +10,31 @@ const STORAGE_KEY = '@analysis_results';
  */
 export const saveAnalysisResult = async (result) => {
     try {
-        // 1. Mevcut veriyi çek
         // 1. Retrieve existing data
+        // 1. Mevcut veriyi çek
         const existingData = await AsyncStorage.getItem(STORAGE_KEY);
         let results = existingData ? JSON.parse(existingData) : [];
 
-        // 2. Yeni veriyi hazırla (Benzersiz ID ve tarih ekle)
         // 2. Prepare the new data (Add a unique ID and date)
+        // 2. Yeni veriyi hazırla (Benzersiz ID ve tarih ekle)
         const newEntry = {
             ...result,
             savedAt: new Date().toISOString(),
-            localId: Date.now().toString(), // Silme işlemi için benzersiz ID
+            localId: Date.now().toString(), // Unique ID for deletion / Silme işlemi için benzersiz ID
         };
         
-        // 3. Listenin başına ekle
         // 3. Add to the beginning of the list
+        // 3. Listenin başına ekle
         results.unshift(newEntry);
 
+        // 4. Save
         // 4. Kaydet
-        // 4. Save 
-        
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(results));
-        console.log("✅ Analiz kaydedildi:", newEntry.localId);
+        console.log("✅ Analysis saved:", newEntry.localId);
         return newEntry;
 
     } catch (error) {
-        console.error("Analiz kaydedilemedi:", error);
+        console.error("Failed to save analysis:", error);
         throw error;
     }
 };
@@ -44,16 +43,12 @@ export const saveAnalysisResult = async (result) => {
  * Get all saved analysis results.
  * Kaydedilmiş tüm analiz sonuçlarını getir.
  */
-/**
-* Get all saved analysis results. 
-* Bring all saved analysis results.
-*/
 export const getSavedAnalyses = async () => {
     try {
         const data = await AsyncStorage.getItem(STORAGE_KEY);
         return data ? JSON.parse(data) : [];
     } catch (error) {
-        console.error("Veri okunurken hata:", error);
+        console.error("Error reading data:", error);
         return [];
     }
 };
@@ -62,23 +57,40 @@ export const getSavedAnalyses = async () => {
  * Delete a specific analysis.
  * Belirli bir analizi sil.
  */
-/**
-* Delete a specific analysis.
-* Delete a specific analysis.
-*/
 export const deleteAnalysis = async (localId) => {
     try {
         const existingData = await AsyncStorage.getItem(STORAGE_KEY);
         if (!existingData) return;
 
         let results = JSON.parse(existingData);
+        // Filter out the item with matching ID
         // ID'si eşleşmeyeni tut, eşleşeni at
-        // Keep the one with the matching ID, discard the one with the matching ID
         results = results.filter(item => item.localId !== localId);
 
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(results));
     } catch (error) {
-        console.error("Silme hatası:", error);
+        console.error("Delete error:", error);
+    }
+};
+
+/**
+ * Delete multiple analyses by IDs.
+ * Birden fazla analizi ID'lerine göre sil.
+ */
+export const deleteMultipleAnalyses = async (idsToDelete) => {
+    try {
+        const existingData = await AsyncStorage.getItem(STORAGE_KEY);
+        if (!existingData) return;
+
+        let results = JSON.parse(existingData);
+        // Filter out items that are in the delete list
+        // Silinecekler listesinde olan öğeleri filtrele
+        results = results.filter(item => !idsToDelete.includes(item.localId));
+
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(results));
+        console.log(`✅ Deleted ${idsToDelete.length} analyses.`);
+    } catch (error) {
+        console.error("Bulk delete error:", error);
     }
 };
 
@@ -86,14 +98,10 @@ export const deleteAnalysis = async (localId) => {
  * Clear all saved analyses.
  * Tüm kayıtlı analizleri temizle.
  */
-/**
-* Clear all saved analyses. 
-* Clear all saved analyses.
-*/
 export const clearAllAnalyses = async () => {
     try {
         await AsyncStorage.removeItem(STORAGE_KEY);
     } catch (error) {
-        console.error("Temizleme hatası:", error);
+        console.error("Clear error:", error);
     }
 };
