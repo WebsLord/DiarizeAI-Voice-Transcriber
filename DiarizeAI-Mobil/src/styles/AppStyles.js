@@ -1,25 +1,43 @@
+// src/styles/AppStyles.js
+
 import { StyleSheet, Dimensions } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 export default StyleSheet.create({
-  // --- Genel ---
+  // --- General ---
   container: {
     flex: 1,
     backgroundColor: '#121212',
     paddingTop: 10,
   },
   
-  // --- Header ---
+  // --- Header (Fixed Layout) ---
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: 10,
-    marginBottom: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    backgroundColor: '#121212', 
+    borderBottomWidth: 1,
+    borderBottomColor: '#222',
+    marginTop: 30, // Safe area fix
   },
-  title: {
+  headerBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  title: { // Legacy title style
     fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
@@ -290,5 +308,154 @@ export default StyleSheet.create({
     marginTop: 15,
     fontSize: 14,
     letterSpacing: 1,
-  }
+  },
+
+  // ==========================================
+  // --- ADVANCED SEARCH & FILTER STYLES ---
+  // ==========================================
+  
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#222',
+    backgroundColor: '#121212',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E1E1E',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  searchInput: {
+    flex: 1,
+    color: '#FFF',
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  advancedToggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 15,
+    paddingHorizontal: 5,
+  },
+  advancedLabel: {
+    color: '#AAA',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
+  // --- Filters Area ---
+  filtersWrapper: {
+    marginTop: 15,
+  },
+  filterLabel: {
+    color: '#666',
+    fontSize: 12,
+    marginBottom: 8,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  filterScroll: {
+    paddingBottom: 10,
+  },
+  filterChip: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#252525',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  filterChipActive: {
+    backgroundColor: '#4A90E2',
+    borderColor: '#4A90E2',
+  },
+  filterText: {
+    color: '#888',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  filterTextActive: {
+    color: '#FFF',
+    fontWeight: 'bold',
+  },
+
+  // --- Badge System ---
+  badgeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  matchBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  badgeTitle: {
+    backgroundColor: 'rgba(245, 166, 35, 0.15)', 
+    borderColor: '#F5A623',
+  },
+  badgeTextTitle: { color: '#F5A623' },
+  badgeSummary: {
+    backgroundColor: 'rgba(155, 89, 182, 0.15)', 
+    borderColor: '#9B59B6',
+  },
+  badgeTextSummary: { color: '#9B59B6' },
+  badgeTranscript: {
+    backgroundColor: 'rgba(74, 144, 226, 0.15)', 
+    borderColor: '#4A90E2',
+  },
+  badgeTextTranscript: { color: '#4A90E2' },
+
+  // ==========================================
+  // --- iOS DATE PICKER MODAL STYLES ---
+  // ==========================================
+  datePickerModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dim background
+  },
+  datePickerContainer: {
+    backgroundColor: '#1E1E1E',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 30, // Safe area for iPhone X+
+  },
+  datePickerToolbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  datePickerTitle: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  datePickerCancelText: {
+    color: '#FF5252',
+    fontSize: 16,
+  },
+  datePickerDoneText: {
+    color: '#4A90E2',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
