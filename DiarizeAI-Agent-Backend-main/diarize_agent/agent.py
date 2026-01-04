@@ -73,7 +73,6 @@ def _build_prompt(
     focus_exclusive: bool = False
 ) -> str:
     
-    # Segmentleri JSON stringe çevir
     segments_json = json.dumps(segments, ensure_ascii=False)
 
     # Dil Haritası
@@ -136,13 +135,15 @@ INPUT DATA (Segments with timestamps and potential Speaker Labels):
 2. {transcript_instruction}
 3. {focus_instruction}
 
-4. **INTELLIGENT SPEAKER NAMING (CRITICAL)**:
-   - The input segments may already have labels like "SPEAKER_00", "SPEAKER_01".
-   - **YOUR GOAL**: Identify the REAL NAMES of these speakers from the conversation context.
-   - **LOGIC**: If "SPEAKER_00" says "Hello Erdem", then "SPEAKER_01" is likely "Erdem".
-   - **ACTION**: Replace ALL instances of "SPEAKER_XX" with the detected Real Name (e.g. "Erdem", "Ahmet Hoca").
-   - If you cannot find a name, keep "Speaker 1", "Speaker 2" etc.
-   - **PRESERVE TIMESTAMPS**: Do not change the 'start' and 'end' values.
+4. **INTELLIGENT SPEAKER NAMING & FORMATTING (CRITICAL)**:
+   - **DETECT NAMES**: Identify REAL NAMES (e.g. "Erdem") from context. Replace "SPEAKER_XX" labels.
+   - **CLEAN TRANSCRIPT FORMAT**: In the 'metadata.clean_transcript' field, **MERGE consecutive segments** from the same speaker into a single paragraph.
+     - **WRONG**:
+       Efe: Hello.
+       Efe: How are you?
+     - **RIGHT**:
+       Efe: Hello. How are you?
+     - **RULE**: Only start a new line with "Name:" when the speaker CHANGES.
 
 --- REQUIRED JSON OUTPUT FORMAT ---
 {{
@@ -151,15 +152,15 @@ INPUT DATA (Segments with timestamps and potential Speaker Labels):
   "keypoints": ["Point 1", "Point 2"],
   "segments": [
     {{ "start": 0.0, "end": 2.5, "speaker": "Erdem", "text": "Text..." }},
-    {{ "start": 2.5, "end": 5.0, "speaker": "Ahmet", "text": "Text..." }}
+    {{ "start": 2.5, "end": 5.0, "speaker": "Erdem", "text": "Text..." }} 
   ],
   "metadata": {{
     "language": "Detected language code",
-    "clean_transcript": "Full transcript text formatted as:\\nErdem: Text...\\nAhmet: Text..."
+    "clean_transcript": "Merged transcript text with Speaker Names only at the start of turns."
   }}
 }}
 
-Take a deep breath. Analyze context. Reveal the real names.
+Take a deep breath. Merge same-speaker segments in the clean transcript.
 """.strip()
 
     return task
@@ -196,7 +197,7 @@ def analyze_audio_segments_with_gemini(
         focus_exclusive=focus_exclusive
     )
 
-    print(f"\n🚀 PROMPT SENT TO AI (Context-Aware Naming Active):")
+    print(f"\n🚀 PROMPT SENT TO AI (Context-Aware Naming & Merging Active):")
     print(f"   Target Summary Lang: {summary_lang}")
     print(f"   Target Transcript Lang: {transcript_lang}")
 
@@ -246,11 +247,11 @@ def analyze_audio_segments_with_gemini(
     raise RuntimeError(f"Analysis failed: {last_error}")
 
 if __name__ == "__main__":
-    print("--- Running Smart Naming Test ---")
-    # Simulating Pyannote Output (SPEAKER_XX labels)
+    print("--- Running Smart Naming & Merging Test ---")
     test_segments = [
-        {"start": 0.0, "end": 2.0, "speaker": "SPEAKER_00", "text": "Merhaba Erdem, nasılsın?"},
-        {"start": 2.0, "end": 4.0, "speaker": "SPEAKER_01", "text": "İyiyim Ahmet, sen nasılsın?"},
+        {"start": 0.0, "end": 2.0, "speaker": "SPEAKER_00", "text": "Evet yanımızda şu an Osman var."},
+        {"start": 2.0, "end": 4.0, "speaker": "SPEAKER_00", "text": "Projemin mobil kısmını bitirdim."},
+        {"start": 4.0, "end": 6.0, "speaker": "SPEAKER_01", "text": "Harika Efe abi!"},
     ]
     result = analyze_audio_segments_with_gemini(
         test_segments, 
