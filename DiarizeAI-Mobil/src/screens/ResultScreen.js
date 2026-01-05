@@ -1,17 +1,24 @@
 // src/screens/ResultScreen.js
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView, Alert, Dimensions } from 'react-native';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView, Alert, Dimensions, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
+import { useTranslation } from 'react-i18next'; // Import Translation Hook
 
 import { deleteAnalysis } from '../utils/resultStorage';
 
+// Enable LayoutAnimation for smooth toggle
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export default function ResultScreen({ route, navigation }) {
   const { data } = route.params || {};
+  const { t } = useTranslation(); // Init translation
 
   // --- AUDIO REFS & STATES ---
   const soundRef = useRef(null); 
@@ -25,7 +32,12 @@ export default function ResultScreen({ route, navigation }) {
   const [localUri, setLocalUri] = useState(null);
   const [isFileMissing, setIsFileMissing] = useState(false);
 
-  // 1. GÜVENLİK KONTROLÜ
+  // --- UI STATES ---
+  // Default to showing highlights
+  // Varsayılan olarak vurgulamaları göster
+  const [showHighlights, setShowHighlights] = useState(true);
+
+  // 1. SECURITY CHECK
   if (!data) {
     return (
       <SafeAreaView style={styles.container}>
@@ -37,27 +49,19 @@ export default function ResultScreen({ route, navigation }) {
     );
   }
 
-  // --- 2. VERİ HAZIRLIĞI ---
+  // --- 2. DATA PREPARATION ---
   const processedSegments = useMemo(() => {
     let rawSegments = [];
-    
-    let source = 
-        data.segments || 
-        data.segments_json || 
-        data.transcript_segments ||
-        (data.result ? data.result.segments : null);
+    let source = data.segments || data.segments_json || data.transcript_segments || (data.result ? data.result.segments : null);
 
     try {
         if (!source) return []; 
-
         if (typeof source === 'string') {
             rawSegments = JSON.parse(source);
             if (typeof rawSegments === 'string') rawSegments = JSON.parse(rawSegments);
-        } 
-        else {
+        } else {
             rawSegments = source;
         }
-
         if (!Array.isArray(rawSegments)) return [];
 
         return rawSegments.map(seg => ({
@@ -65,9 +69,8 @@ export default function ResultScreen({ route, navigation }) {
             start: parseFloat(seg.start || seg.start_time || 0), 
             end: parseFloat(seg.end || seg.end_time || 0)
         }));
-
     } catch (e) {
-        console.log("Segment parse hatası:", e);
+        console.log("Segment parse error:", e);
         return [];
     }
   }, [data]);
@@ -82,11 +85,53 @@ export default function ResultScreen({ route, navigation }) {
     } catch (e) { return []; }
   }, [data]);
 
-  // --- EXTRACT FLAGS ---
   const flags = useMemo(() => {
       const f = data.flags || (data.result ? data.result.flags : []) || [];
       return Array.isArray(f) ? f : [];
   }, [data]);
+
+  // --- TOGGLE HANDLER ---
+  const toggleHighlights = () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setShowHighlights(!showHighlights);
+  };
+
+  // --- MARKDOWN PARSER FOR HIGHLIGHTING ---
+  const highlightText = (text, baseStyle) => {
+      if (!text) return null;
+
+      // Split by **word**
+      const parts = text.split(/\*\*(.*?)\*\*/g);
+
+      return (
+          <Text style={baseStyle}>
+              {parts.map((part, index) => {
+                  // Odd indices are the words inside **...**
+                  if (index % 2 === 1) {
+                      return showHighlights ? (
+                          <Text key={index} style={{ 
+                              // --- UPDATED STYLE: PREMIUM AMBER ---
+                              // --- GÜNCELLENMİŞ STİL: PREMIUM KEHRİBAR ---
+                              backgroundColor: 'rgba(255, 193, 7, 0.25)', // Subtle transparent gold/amber
+                              color: '#FFC107', // Bright Amber text
+                              fontWeight: 'bold',
+                              // Add slight padding/radius for a "marker" feel
+                              // "Kalem" hissi için hafif dolgu/yarıçap ekleyin
+                          }}>
+                              {part}
+                          </Text>
+                      ) : (
+                          // If toggle is OFF, show normal text (hidden marker)
+                          <Text key={index}>{part}</Text>
+                      );
+                  } else {
+                      // Even indices are normal text
+                      return <Text key={index}>{part}</Text>;
+                  }
+              })}
+          </Text>
+      );
+  };
 
   // --- 3. LIFECYCLE ---
   useEffect(() => {
@@ -99,10 +144,9 @@ export default function ResultScreen({ route, navigation }) {
       };
   }, []);
 
-  // --- DOSYA İŞLEMLERİ ---
+  // --- FILE OPERATIONS ---
   const checkLocalFile = async () => {
       let targetPath = null;
-
       if (data.originalName) {
           targetPath = FileSystem.documentDirectory + data.originalName;
       } else if (data.audio_path) {
@@ -110,11 +154,7 @@ export default function ResultScreen({ route, navigation }) {
           targetPath = FileSystem.documentDirectory + fileName;
       }
 
-      if (!targetPath) {
-          setLocalUri(null);
-          setIsFileMissing(true);
-          return;
-      }
+      if (!targetPath) { setLocalUri(null); setIsFileMissing(true); return; }
 
       const info = await FileSystem.getInfoAsync(targetPath);
       if (info.exists) {
@@ -129,56 +169,33 @@ export default function ResultScreen({ route, navigation }) {
 
   const loadSound = async (uri) => {
     try {
-      if (soundRef.current) {
-          await soundRef.current.unloadAsync();
-      }
-
-      const { sound: newSound, status } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: false }
-      );
-
+      if (soundRef.current) await soundRef.current.unloadAsync();
+      const { sound: newSound, status } = await Audio.Sound.createAsync({ uri }, { shouldPlay: false });
       soundRef.current = newSound; 
       setDuration(status.durationMillis);
-
       await newSound.setProgressUpdateIntervalAsync(50);
-
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded) {
-          if (!isSeeking) {
-              setPosition(status.positionMillis);
-          }
+          if (!isSeeking) setPosition(status.positionMillis);
           setIsPlaying(status.isPlaying);
-          
-          if (status.didJustFinish) {
-            setIsPlaying(false);
-            newSound.setPositionAsync(0);
-          }
+          if (status.didJustFinish) { setIsPlaying(false); newSound.setPositionAsync(0); }
         }
       });
-
-    } catch (error) {
-      console.log("Ses yükleme hatası:", error);
-    }
+    } catch (error) { console.log("Sound load error:", error); }
   };
 
-  // --- PLAYBACK CONTROLS ---
+  // --- CONTROLS ---
   const handlePlayPause = async () => {
     const sound = soundRef.current;
     if (!sound) return;
-
     if (isPlaying) await sound.pauseAsync();
     else await sound.playAsync();
   };
 
   const handleSlidingStart = () => setIsSeeking(true);
-  
   const handleSlidingComplete = async (value) => {
       const sound = soundRef.current;
-      if (sound) {
-          await sound.setPositionAsync(value);
-          setPosition(value); 
-      }
+      if (sound) { await sound.setPositionAsync(value); setPosition(value); }
       setIsSeeking(false);
   };
 
@@ -186,13 +203,10 @@ export default function ResultScreen({ route, navigation }) {
     const sound = soundRef.current;
     if (sound && !isFileMissing) {
       try {
-          const seekMillis = startTimeSeconds * 1000;
-          await sound.setPositionAsync(seekMillis);
-          setPosition(seekMillis); 
+          await sound.setPositionAsync(startTimeSeconds * 1000);
+          setPosition(startTimeSeconds * 1000); 
           if (!isPlaying) await sound.playAsync();
-      } catch (error) {
-          console.log("Segment atlama hatası:", error);
-      }
+      } catch (error) { console.log("Seek error:", error); }
     }
   };
 
@@ -201,21 +215,16 @@ export default function ResultScreen({ route, navigation }) {
           const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*', copyToCacheDirectory: true });
           if (result.canceled || !result.assets) return;
           const pickedFile = result.assets[0];
-          
           const { sound: tempSound, status } = await Audio.Sound.createAsync({ uri: pickedFile.uri });
           const pickedDuration = status.durationMillis / 1000; 
           await tempSound.unloadAsync();
-
           const lastSegment = processedSegments.length > 0 ? processedSegments[processedSegments.length - 1] : null;
           const expectedDuration = lastSegment ? lastSegment.end : 0;
-
           if (expectedDuration > 0 && Math.abs(pickedDuration - expectedDuration) > 10) {
-              Alert.alert("Uyarı", "Süre biraz farklı görünüyor ama yine de yüklüyorum.");
+              Alert.alert("Warning", "Duration mismatch, proceeding anyway.");
           }
           await performRelink(pickedFile);
-      } catch (error) {
-          Alert.alert("Hata", error.message);
-      }
+      } catch (error) { Alert.alert("Error", error.message); }
   };
 
   const performRelink = async (pickedFile) => {
@@ -223,20 +232,17 @@ export default function ResultScreen({ route, navigation }) {
           let fileName = data.originalName;
           if (!fileName && data.audio_path) fileName = data.audio_path.split(/[/\\]/).pop();
           if (!fileName) return;
-
           const targetPath = FileSystem.documentDirectory + fileName;
           await FileSystem.copyAsync({ from: pickedFile.uri, to: targetPath });
-          Alert.alert("Başarılı", "Dosya geri yüklendi!");
+          Alert.alert("Success", "File relinked!");
           checkLocalFile(); 
-      } catch (e) {
-          Alert.alert("Hata", e.message);
-      }
+      } catch (e) { Alert.alert("Error", e.message); }
   };
 
   const handleDeleteAnalysis = async () => {
-      Alert.alert("Sil", "Analizi silmek istediğine emin misin?", [
-          { text: "İptal", style: "cancel" },
-          { text: "Sil", style: "destructive", onPress: async () => {
+      Alert.alert("Delete", "Are you sure?", [
+          { text: "Cancel", style: "cancel" },
+          { text: "Delete", style: "destructive", onPress: async () => {
               if (data.localId) await deleteAnalysis(data.localId);
               navigation.goBack();
           }}
@@ -302,16 +308,32 @@ export default function ResultScreen({ route, navigation }) {
             </View>
         )}
 
-        {/* ÖZET */}
+        {/* --- SUMMARY CARD WITH TOGGLE --- */}
+        {/* --- TOGGLE BUTONLU ÖZET KARTI --- */}
         <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="document-text-outline" size={24} color="#4A90E2" />
-            <Text style={styles.cardTitle}>Özet</Text>
+          <View style={[styles.cardHeader, { justifyContent: 'space-between' }]}> 
+            <View style={{flexDirection:'row', alignItems:'center'}}>
+                <Ionicons name="document-text-outline" size={24} color="#4A90E2" />
+                <Text style={styles.cardTitle}>Özet</Text>
+            </View>
+            
+            {/* TOGGLE BUTTON */}
+            <TouchableOpacity onPress={toggleHighlights} style={styles.toggleButton}>
+                <Ionicons 
+                    name={showHighlights ? "eye" : "eye-off"} 
+                    size={16} 
+                    color={showHighlights ? "#FFC107" : "#d3ceceff"} 
+                />
+                <Text style={[styles.toggleText, { color: showHighlights ? "#FFC107" : "#d3ceceff" }]}>
+                    {showHighlights ? (t('hide_highlights') || "Gizle") : (t('show_highlights') || "Göster")}
+                </Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.cardText}>{data.summary || "Özet bulunamadı."}</Text>
+          
+          {highlightText(data.summary || "Özet bulunamadı.", styles.cardText)}
         </View>
 
-        {/* BİLGİLER */}
+        {/* INFO */}
         <View style={styles.row}>
           <View style={[styles.card, { flex: 1, marginRight: 10 }]}>
             <Text style={styles.label}>Tür</Text>
@@ -323,7 +345,7 @@ export default function ResultScreen({ route, navigation }) {
           </View>
         </View>
 
-        {/* ANAHTAR NOKTALAR */}
+        {/* KEY POINTS */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="list-outline" size={24} color="#F5A623" />
@@ -332,12 +354,12 @@ export default function ResultScreen({ route, navigation }) {
           {keypoints.map((point, index) => (
               <View key={index} style={styles.bulletPoint}>
                 <Text style={styles.bullet}>•</Text>
-                <Text style={styles.cardText}>{point}</Text>
+                {highlightText(point, styles.cardText)}
               </View>
           ))}
         </View>
 
-        {/* --- KARAOKE TRANSKRİPT --- */}
+        {/* TRANSCRIPT */}
         <View style={styles.card}>
             <View style={styles.cardHeader}>
                 <Ionicons name="chatbubbles-outline" size={24} color="#50E3C2" />
@@ -348,44 +370,34 @@ export default function ResultScreen({ route, navigation }) {
                 processedSegments.map((seg, index) => {
                     const currentSec = position / 1000;
                     const isActive = currentSec >= seg.start && currentSec <= seg.end;
-                    
-                    // Check flags
-                    // Bayrakları kontrol et
                     const hasFlag = flags.some(flagTime => flagTime >= seg.start && flagTime <= seg.end);
                     
                     return (
                         <TouchableOpacity 
                             key={index} 
-                            style={[
-                                styles.segmentBox, 
-                                isActive && styles.activeSegment,
-                                // Border for flag removed, now using Badge
-                                // Bayrak için kenarlık kaldırıldı, artık Rozet kullanılıyor
-                            ]}
+                            style={[styles.segmentBox, isActive && styles.activeSegment]}
                             onPress={() => handleSegmentPress(seg.start)}
                             activeOpacity={0.7}
                         >
-                            {/* --- ABSOLUTE FLAG BADGE --- */}
-                            {/* --- MUTLAK KONUMLU BAYRAK ROZETİ --- */}
                             {hasFlag && (
                                 <View style={styles.flagBadge}>
-                                    <FontAwesome5 name="flag" size={12} color="#F5A623" solid />
+                                    <Ionicons name="flag" size={14} color="#F5A623" />
                                 </View>
                             )}
 
                             <View style={{flexDirection:'row', justifyContent:'space-between', marginBottom: 5}}>
-                                <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                                    <Text style={[styles.speakerName, isActive && { color: '#000' }]}>
-                                        {seg.speaker || "Konuşmacı"}:
-                                    </Text>
-                                </View>
+                                <Text style={[styles.speakerName, isActive && { color: '#000' }]}>
+                                    {seg.speaker || "Konuşmacı"}:
+                                </Text>
                                 <Text style={[styles.timeStamp, isActive && { color: '#333' }]}>
                                     {formatTime(seg.start * 1000)}
                                 </Text>
                             </View>
-                            <Text style={[styles.segmentText, isActive && { color: '#000', fontWeight: '600' }]}>
-                                {seg.text}
-                            </Text>
+                            
+                            {highlightText(
+                                seg.text, 
+                                [styles.segmentText, isActive && { color: '#000', fontWeight: '600' }]
+                            )}
                         </TouchableOpacity>
                     );
                 })
@@ -406,7 +418,7 @@ const styles = StyleSheet.create({
   backButton: { marginRight: 15, padding: 5 },
   title: { fontSize: 24, fontWeight: 'bold', color: '#FFF' },
   
-  // PLAYER STYLES
+  // PLAYER
   playerCard: {
       backgroundColor: '#252525',
       padding: 15,
@@ -420,102 +432,66 @@ const styles = StyleSheet.create({
       shadowRadius: 5,
       elevation: 5
   },
-  playerTopRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between'
-  },
+  playerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   playBtn: {
-      width: 45, height: 45,
-      borderRadius: 25,
-      backgroundColor: '#4A90E2',
-      alignItems: 'center', justifyContent: 'center',
-      marginRight: 10
+      width: 45, height: 45, borderRadius: 25, backgroundColor: '#4A90E2',
+      alignItems: 'center', justifyContent: 'center', marginRight: 10
   },
-  timeText: {
-      color: '#CCC',
-      fontSize: 12,
-      fontVariant: ['tabular-nums'],
-      width: 40,
-      textAlign: 'center'
-  },
+  timeText: { color: '#CCC', fontSize: 12, fontVariant: ['tabular-nums'], width: 40, textAlign: 'center' },
 
-  // CARD STYLES
+  // CARDS
   card: { backgroundColor: '#1E1E1E', borderRadius: 12, padding: 15, marginBottom: 15 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   cardTitle: { color: '#FFF', fontSize: 18, fontWeight: '600', marginLeft: 10 },
   cardText: { color: '#CCC', fontSize: 15, lineHeight: 22 },
   transcriptText: { color: '#AAA', fontSize: 14, lineHeight: 22, fontStyle: 'italic' },
   
+  // TOGGLE BUTTON STYLE
+  toggleButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: '#333'
+  },
+  toggleText: {
+      fontSize: 12,
+      fontWeight: '600',
+      marginLeft: 6
+  },
+
   row: { flexDirection: 'row', marginBottom: 15 },
   label: { color: '#888', fontSize: 12, marginBottom: 5 },
   value: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
   bulletPoint: { flexDirection: 'row', marginBottom: 8 },
   bullet: { color: '#F5A623', fontSize: 20, marginRight: 10, lineHeight: 22 },
 
-  // SEGMENT STYLES - KARAOKE
+  // KARAOKE SEGMENTS
   segmentBox: {
-      marginBottom: 15, // Increased margin for badge space / Rozet alanı için artırılmış boşluk
-      padding: 12,
-      borderRadius: 10,
-      backgroundColor: '#2A2A2A', 
-      borderLeftWidth: 4,
-      borderLeftColor: '#4A90E2',
-      opacity: 0.8,
-      position: 'relative', // Necessary for absolute badge / Mutlak rozet için gerekli
-      overflow: 'visible'   // Allow badge to hang out / Rozetin dışarı taşmasına izin ver
+      marginBottom: 15, padding: 12, borderRadius: 10,
+      backgroundColor: '#2A2A2A', borderLeftWidth: 4, borderLeftColor: '#4A90E2',
+      opacity: 0.8, position: 'relative', overflow: 'visible'   
   },
   activeSegment: {
-      backgroundColor: '#50E3C2', 
-      borderLeftColor: '#FFF',
-      transform: [{ scale: 1.02 }], 
-      opacity: 1,
-      shadowColor: "#50E3C2",
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.5,
-      shadowRadius: 10,
-      elevation: 5
+      backgroundColor: '#50E3C2', borderLeftColor: '#FFF',
+      transform: [{ scale: 1.02 }], opacity: 1,
+      shadowColor: "#50E3C2", shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.5, shadowRadius: 10, elevation: 5
   },
-  
-  // --- NEW BADGE STYLE ---
-  // --- YENİ ROZET STİLİ ---
   flagBadge: {
-      position: 'absolute',
-      top: -10, // Hangs off top / Üstten sarkar
-      left: -10, // Hangs off left / Soldan sarkar
-      backgroundColor: '#1E1E1E', // Dark bg to pop / Öne çıkması için koyu arkaplan
-      width: 26,
-      height: 26,
-      borderRadius: 13,
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 10,
-      borderWidth: 1,
-      borderColor: '#F5A623',
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.5,
-      shadowRadius: 2,
-      elevation: 5
+      position: 'absolute', top: -10, left: -10, backgroundColor: '#1E1E1E', 
+      width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center',
+      zIndex: 10, borderWidth: 1, borderColor: '#F5A623',
+      shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.5, shadowRadius: 2, elevation: 5
   },
+  speakerName: { color: '#4A90E2', fontWeight: 'bold', fontSize: 14, marginLeft: 5 },
+  segmentText: { color: '#FFF', fontSize: 15, lineHeight: 22 },
+  timeStamp: { fontSize: 11, color: '#666' },
 
-  speakerName: {
-      color: '#4A90E2',
-      fontWeight: 'bold',
-      fontSize: 14,
-      marginLeft: 5 // Slight push for aesthetics / Estetik için hafif itme
-  },
-  segmentText: {
-      color: '#FFF',
-      fontSize: 15,
-      lineHeight: 22
-  },
-  timeStamp: {
-      fontSize: 11,
-      color: '#666',
-  },
-
-  // ERROR STYLES
+  // ERROR
   errorCard: {
       backgroundColor: '#2A1515', borderRadius: 12, padding: 20, marginBottom: 20,
       alignItems: 'center', borderColor: '#FF5252', borderWidth: 1
