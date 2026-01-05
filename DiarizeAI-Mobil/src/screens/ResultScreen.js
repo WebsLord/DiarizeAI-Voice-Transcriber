@@ -7,7 +7,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
-import { useTranslation } from 'react-i18next'; // Import Translation Hook
+import { useTranslation } from 'react-i18next'; 
 
 import { deleteAnalysis } from '../utils/resultStorage';
 
@@ -18,7 +18,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 export default function ResultScreen({ route, navigation }) {
   const { data } = route.params || {};
-  const { t } = useTranslation(); // Init translation
+  const { t } = useTranslation(); 
 
   // --- AUDIO REFS & STATES ---
   const soundRef = useRef(null); 
@@ -33,8 +33,6 @@ export default function ResultScreen({ route, navigation }) {
   const [isFileMissing, setIsFileMissing] = useState(false);
 
   // --- UI STATES ---
-  // Default to showing highlights
-  // Varsayılan olarak vurgulamaları göster
   const [showHighlights, setShowHighlights] = useState(true);
 
   // 1. SECURITY CHECK
@@ -50,6 +48,14 @@ export default function ResultScreen({ route, navigation }) {
   }
 
   // --- 2. DATA PREPARATION ---
+  
+  // Check if keywords exist to enable/disable toggle
+  // Geçişi etkinleştirmek/devre dışı bırakmak için anahtar kelimelerin olup olmadığını kontrol et
+  const hasKeywords = useMemo(() => {
+      const k = (data.usedSettings && data.usedSettings.keywords) || data.input_keywords || "";
+      return k && k.trim().length > 0;
+  }, [data]);
+
   const processedSegments = useMemo(() => {
     let rawSegments = [];
     let source = data.segments || data.segments_json || data.transcript_segments || (data.result ? data.result.segments : null);
@@ -92,6 +98,7 @@ export default function ResultScreen({ route, navigation }) {
 
   // --- TOGGLE HANDLER ---
   const toggleHighlights = () => {
+      if (!hasKeywords) return; // Guard clause
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowHighlights(!showHighlights);
   };
@@ -100,32 +107,30 @@ export default function ResultScreen({ route, navigation }) {
   const highlightText = (text, baseStyle) => {
       if (!text) return null;
 
-      // Split by **word**
+      // If no keywords were provided, just return plain text (strip asterisks if any exist by mistake)
+      // Anahtar kelime sağlanmadıysa, düz metin döndür (yanlışlıkla varsa yıldız işaretlerini kaldır)
+      if (!hasKeywords) {
+          return <Text style={baseStyle}>{text.replace(/\*\*/g, '')}</Text>;
+      }
+
       const parts = text.split(/\*\*(.*?)\*\*/g);
 
       return (
           <Text style={baseStyle}>
               {parts.map((part, index) => {
-                  // Odd indices are the words inside **...**
                   if (index % 2 === 1) {
                       return showHighlights ? (
                           <Text key={index} style={{ 
-                              // --- UPDATED STYLE: PREMIUM AMBER ---
-                              // --- GÜNCELLENMİŞ STİL: PREMIUM KEHRİBAR ---
-                              backgroundColor: 'rgba(255, 193, 7, 0.25)', // Subtle transparent gold/amber
-                              color: '#FFC107', // Bright Amber text
+                              backgroundColor: 'rgba(255, 193, 7, 0.25)', 
+                              color: '#FFC107', 
                               fontWeight: 'bold',
-                              // Add slight padding/radius for a "marker" feel
-                              // "Kalem" hissi için hafif dolgu/yarıçap ekleyin
                           }}>
                               {part}
                           </Text>
                       ) : (
-                          // If toggle is OFF, show normal text (hidden marker)
                           <Text key={index}>{part}</Text>
                       );
                   } else {
-                      // Even indices are normal text
                       return <Text key={index}>{part}</Text>;
                   }
               })}
@@ -257,6 +262,12 @@ export default function ResultScreen({ route, navigation }) {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  // Helper for button color
+  const getToggleColor = () => {
+      if (!hasKeywords) return "#555"; // Disabled color
+      return showHighlights ? "#FFC107" : "#888";
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       
@@ -309,7 +320,6 @@ export default function ResultScreen({ route, navigation }) {
         )}
 
         {/* --- SUMMARY CARD WITH TOGGLE --- */}
-        {/* --- TOGGLE BUTONLU ÖZET KARTI --- */}
         <View style={styles.card}>
           <View style={[styles.cardHeader, { justifyContent: 'space-between' }]}> 
             <View style={{flexDirection:'row', alignItems:'center'}}>
@@ -318,13 +328,21 @@ export default function ResultScreen({ route, navigation }) {
             </View>
             
             {/* TOGGLE BUTTON */}
-            <TouchableOpacity onPress={toggleHighlights} style={styles.toggleButton}>
+            <TouchableOpacity 
+                onPress={toggleHighlights} 
+                disabled={!hasKeywords} // Disable if no keywords
+                style={[
+                    styles.toggleButton,
+                    !hasKeywords && { opacity: 0.4, borderColor: '#333' } // Visual disable
+                ]}
+            >
                 <Ionicons 
                     name={showHighlights ? "eye" : "eye-off"} 
                     size={16} 
-                    color={showHighlights ? "#FFC107" : "#d3ceceff"} 
+                    color={getToggleColor()} 
                 />
-                <Text style={[styles.toggleText, { color: showHighlights ? "#FFC107" : "#d3ceceff" }]}>
+                <Text style={[styles.toggleText, { color: getToggleColor() }]}>
+                    {/* Translate toggle text */}
                     {showHighlights ? (t('hide_highlights') || "Gizle") : (t('show_highlights') || "Göster")}
                 </Text>
             </TouchableOpacity>

@@ -61,5 +61,8 @@
   "topic_hint": "Dikkat edilecek kelimeler (örn: Vize, Final)",
   "topic_placeholder": "Örn: Final Sınavı, Proje...",
   "original": "Orijinal",
-  "Summarized": "Özetlenenler"
+  "Summarized": "Özetlenenler",
+  
+  "hide_highlights": "Önemlileri Gizle",
+  "show_highlights": "Önemlileri Göster"
 }
