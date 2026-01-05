@@ -14,7 +14,6 @@ export default function ResultScreen({ route, navigation }) {
   const { data } = route.params || {};
 
   // --- AUDIO REFS & STATES ---
-  // Ses nesnesini referans olarak tutuyoruz ki sayfa kapanınca kaybolmasın, kontrol edebilelim.
   const soundRef = useRef(null); 
   
   const [isPlaying, setIsPlaying] = useState(false);
@@ -38,12 +37,10 @@ export default function ResultScreen({ route, navigation }) {
     );
   }
 
-  // --- 2. VERİ HAZIRLIĞI (KURŞUN GEÇİRMEZ PARSE) ---
-  // Bu kısım, backend'den gelen karmaşık veriyi düzeltip telefona "Al sana temiz liste" der.
+  // --- 2. VERİ HAZIRLIĞI ---
   const processedSegments = useMemo(() => {
     let rawSegments = [];
     
-    // BACKEND'DEN GELEN OLASI TÜM YOLLARI DENE
     let source = 
         data.segments || 
         data.segments_json || 
@@ -53,10 +50,8 @@ export default function ResultScreen({ route, navigation }) {
     try {
         if (!source) return []; 
 
-        // Durum 1: Veri String ise (JSON.parse gerekir)
         if (typeof source === 'string') {
             rawSegments = JSON.parse(source);
-            // Double parse check (String içinde string JSON varsa)
             if (typeof rawSegments === 'string') rawSegments = JSON.parse(rawSegments);
         } 
         else {
@@ -65,7 +60,6 @@ export default function ResultScreen({ route, navigation }) {
 
         if (!Array.isArray(rawSegments)) return [];
 
-        // Her segmentin start/end değerlerini sayıya çevir (ÖNEMLİ!)
         return rawSegments.map(seg => ({
             ...seg,
             start: parseFloat(seg.start || seg.start_time || 0), 
@@ -88,12 +82,15 @@ export default function ResultScreen({ route, navigation }) {
     } catch (e) { return []; }
   }, [data]);
 
-  // --- 3. YAŞAM DÖNGÜSÜ (LIFECYCLE) ---
+  // --- EXTRACT FLAGS ---
+  const flags = useMemo(() => {
+      const f = data.flags || (data.result ? data.result.flags : []) || [];
+      return Array.isArray(f) ? f : [];
+  }, [data]);
+
+  // --- 3. LIFECYCLE ---
   useEffect(() => {
       checkLocalFile();
-      
-      // TEMİZLİK: Sayfadan çıkıldığında (Unmount) çalışır.
-      // soundRef.current sayesinde ses nesnesine kesinlikle ulaşır ve kapatır.
       return () => {
         if (soundRef.current) {
           soundRef.current.stopAsync();
@@ -106,7 +103,6 @@ export default function ResultScreen({ route, navigation }) {
   const checkLocalFile = async () => {
       let targetPath = null;
 
-      // İsim bulma mantığı
       if (data.originalName) {
           targetPath = FileSystem.documentDirectory + data.originalName;
       } else if (data.audio_path) {
@@ -133,7 +129,6 @@ export default function ResultScreen({ route, navigation }) {
 
   const loadSound = async (uri) => {
     try {
-      // Eskisi varsa temizle
       if (soundRef.current) {
           await soundRef.current.unloadAsync();
       }
@@ -143,11 +138,9 @@ export default function ResultScreen({ route, navigation }) {
         { shouldPlay: false }
       );
 
-      // HEM REF HEM STATE GÜNCELLE
       soundRef.current = newSound; 
       setDuration(status.durationMillis);
 
-      // Karaoke için çok hızlı güncelleme (50ms)
       await newSound.setProgressUpdateIntervalAsync(50);
 
       newSound.setOnPlaybackStatusUpdate((status) => {
@@ -169,7 +162,7 @@ export default function ResultScreen({ route, navigation }) {
     }
   };
 
-  // --- OYNATMA KONTROLLERİ ---
+  // --- PLAYBACK CONTROLS ---
   const handlePlayPause = async () => {
     const sound = soundRef.current;
     if (!sound) return;
@@ -184,33 +177,25 @@ export default function ResultScreen({ route, navigation }) {
       const sound = soundRef.current;
       if (sound) {
           await sound.setPositionAsync(value);
-          setPosition(value); // UI anında güncellensin
+          setPosition(value); 
       }
       setIsSeeking(false);
   };
 
-  // --- TRANSKRİPT TIKLAMA (SEGMENT JUMP) ---
   const handleSegmentPress = async (startTimeSeconds) => {
     const sound = soundRef.current;
     if (sound && !isFileMissing) {
       try {
-          // Saniye -> Milisaniye çevrimi
           const seekMillis = startTimeSeconds * 1000;
-          
           await sound.setPositionAsync(seekMillis);
-          setPosition(seekMillis); // UI güncelle
-          
-          // Eğer duruyorsa oynatmaya başla
-          if (!isPlaying) {
-              await sound.playAsync();
-          }
+          setPosition(seekMillis); 
+          if (!isPlaying) await sound.playAsync();
       } catch (error) {
           console.log("Segment atlama hatası:", error);
       }
     }
   };
 
-  // --- DOSYA GERİ YÜKLEME (RE-LINK) ---
   const handleRelinkFile = async () => {
       try {
           const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*', copyToCacheDirectory: true });
@@ -221,12 +206,10 @@ export default function ResultScreen({ route, navigation }) {
           const pickedDuration = status.durationMillis / 1000; 
           await tempSound.unloadAsync();
 
-          // Basit tolerans kontrolü
           const lastSegment = processedSegments.length > 0 ? processedSegments[processedSegments.length - 1] : null;
           const expectedDuration = lastSegment ? lastSegment.end : 0;
 
           if (expectedDuration > 0 && Math.abs(pickedDuration - expectedDuration) > 10) {
-               // Kullanıcıyı uyar ama engelleme (Esneklik)
               Alert.alert("Uyarı", "Süre biraz farklı görünüyor ama yine de yüklüyorum.");
           }
           await performRelink(pickedFile);
@@ -363,22 +346,39 @@ export default function ResultScreen({ route, navigation }) {
 
             {processedSegments.length > 0 ? (
                 processedSegments.map((seg, index) => {
-                    // Hesaplama: Şu anki saniye (position / 1000) aralıkta mı?
                     const currentSec = position / 1000;
                     const isActive = currentSec >= seg.start && currentSec <= seg.end;
+                    
+                    // Check flags
+                    // Bayrakları kontrol et
+                    const hasFlag = flags.some(flagTime => flagTime >= seg.start && flagTime <= seg.end);
                     
                     return (
                         <TouchableOpacity 
                             key={index} 
-                            style={[styles.segmentBox, isActive && styles.activeSegment]}
-                            // Tıklayınca direkt o cümlenin başına atlar
+                            style={[
+                                styles.segmentBox, 
+                                isActive && styles.activeSegment,
+                                // Border for flag removed, now using Badge
+                                // Bayrak için kenarlık kaldırıldı, artık Rozet kullanılıyor
+                            ]}
                             onPress={() => handleSegmentPress(seg.start)}
                             activeOpacity={0.7}
                         >
+                            {/* --- ABSOLUTE FLAG BADGE --- */}
+                            {/* --- MUTLAK KONUMLU BAYRAK ROZETİ --- */}
+                            {hasFlag && (
+                                <View style={styles.flagBadge}>
+                                    <FontAwesome5 name="flag" size={12} color="#F5A623" solid />
+                                </View>
+                            )}
+
                             <View style={{flexDirection:'row', justifyContent:'space-between', marginBottom: 5}}>
-                                <Text style={[styles.speakerName, isActive && { color: '#000' }]}>
-                                    {seg.speaker || "Konuşmacı"}:
-                                </Text>
+                                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                                    <Text style={[styles.speakerName, isActive && { color: '#000' }]}>
+                                        {seg.speaker || "Konuşmacı"}:
+                                    </Text>
+                                </View>
                                 <Text style={[styles.timeStamp, isActive && { color: '#333' }]}>
                                     {formatTime(seg.start * 1000)}
                                 </Text>
@@ -399,7 +399,6 @@ export default function ResultScreen({ route, navigation }) {
   );
 }
 
-// STİLLER SENİN ORİJİNAL DOSYANDAN BİREBİR KOPYALANDI
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212' },
   scrollContent: { padding: 20, paddingBottom: 50 },
@@ -456,18 +455,20 @@ const styles = StyleSheet.create({
 
   // SEGMENT STYLES - KARAOKE
   segmentBox: {
-      marginBottom: 12,
+      marginBottom: 15, // Increased margin for badge space / Rozet alanı için artırılmış boşluk
       padding: 12,
       borderRadius: 10,
       backgroundColor: '#2A2A2A', 
       borderLeftWidth: 4,
       borderLeftColor: '#4A90E2',
-      opacity: 0.8
+      opacity: 0.8,
+      position: 'relative', // Necessary for absolute badge / Mutlak rozet için gerekli
+      overflow: 'visible'   // Allow badge to hang out / Rozetin dışarı taşmasına izin ver
   },
   activeSegment: {
-      backgroundColor: '#50E3C2', // Parlayan Yeşil Arka Plan
+      backgroundColor: '#50E3C2', 
       borderLeftColor: '#FFF',
-      transform: [{ scale: 1.02 }], // Hafif büyütme efekti
+      transform: [{ scale: 1.02 }], 
       opacity: 1,
       shadowColor: "#50E3C2",
       shadowOffset: { width: 0, height: 0 },
@@ -475,10 +476,34 @@ const styles = StyleSheet.create({
       shadowRadius: 10,
       elevation: 5
   },
+  
+  // --- NEW BADGE STYLE ---
+  // --- YENİ ROZET STİLİ ---
+  flagBadge: {
+      position: 'absolute',
+      top: -10, // Hangs off top / Üstten sarkar
+      left: -10, // Hangs off left / Soldan sarkar
+      backgroundColor: '#1E1E1E', // Dark bg to pop / Öne çıkması için koyu arkaplan
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 10,
+      borderWidth: 1,
+      borderColor: '#F5A623',
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.5,
+      shadowRadius: 2,
+      elevation: 5
+  },
+
   speakerName: {
       color: '#4A90E2',
       fontWeight: 'bold',
-      fontSize: 14
+      fontSize: 14,
+      marginLeft: 5 // Slight push for aesthetics / Estetik için hafif itme
   },
   segmentText: {
       color: '#FFF',

@@ -1,22 +1,36 @@
-import React, { useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Animated } from 'react-native';
+// src/components/dashboard/Visualizer.js
+
+import React, { useRef, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Animated, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { FontAwesome5, Ionicons, Entypo, Feather } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import styles from '../../styles/AppStyles';
 import { PlaybackWaveBar, AnimatedWaveBar } from '../WaveBars';
 
-// Added fontScale prop
-// fontScale özelliği eklendi
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export const Visualizer = ({ 
     isRecording, isPaused, duration, metering, selectedFile, 
     playingId, isPlaying, playSound, trashScale, trashTranslateY, trashOpacity,
     handleBackPress, isEditingName, newFileName, setNewFileName, 
-    handleSaveRename, startRenaming, shareFile, fontScale = 1
+    handleSaveRename, startRenaming, shareFile, 
+    flags = [], 
+    fontScale = 1
 }) => {
     
     const { t } = useTranslation();
     const scrollViewRef = useRef();
+
+    // Trigger animation when flags change
+    useEffect(() => {
+        if (flags.length > 0) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        }
+    }, [flags]);
 
     const normalizeWave = (db) => {
         const minDb = -80; const maxHeight = 35; 
@@ -25,14 +39,19 @@ export const Visualizer = ({
         return Math.max(5, height);
     };
 
-    // Helper for dynamic font size
-    // Dinamik yazı boyutu için yardımcı
+    // Helper to check if a bar index corresponds to a flag
+    const getFlagForIndex = (index) => {
+        // Each bar represents approx 75ms (0.075s)
+        const barTime = index * 0.075;
+        // Tolerance window
+        return flags.find(f => Math.abs(f - barTime) < 0.05);
+    };
+
     const dynamicSize = (size) => ({ fontSize: size * fontScale });
 
     return (
         <View style={styles.waveContainer}>
             {/* RECORDING ACTIVE */}
-            {/* KAYIT AKTİF */}
             {isRecording || isPaused ? (
                  <Animated.View 
                     style={[
@@ -44,23 +63,49 @@ export const Visualizer = ({
                     ]}
                  >
                      <Text style={[styles.timerText, dynamicSize(18)]}>{duration}</Text>
-                     <View style={{ height: 60, width: '100%' }}>
+                     
+                     {/* WAVEFORM SCROLLVIEW */}
+                     <View style={{ height: 120, width: '100%' }}> 
                          <ScrollView 
                             ref={scrollViewRef} 
                             horizontal 
                             showsHorizontalScrollIndicator={false} 
                             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-                            contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 10 }}
+                            // PaddingRight: Keeps active head visible
+                            // PaddingBottom: Increased to 30 to give space for the hanging flags
+                            // PaddingBottom: Sarkan bayraklara yer açmak için 30'a çıkarıldı
+                            contentContainerStyle={{ alignItems: 'flex-end', paddingHorizontal: 10, paddingBottom: 30, paddingRight: 60 }}
                          >
-                            {metering.map((db, index) => (
-                                <PlaybackWaveBar key={index} height={normalizeWave(db)} isPlaying={!isPaused} />
-                            ))}
+                            {metering.map((db, index) => {
+                                const hasFlag = getFlagForIndex(index);
+                                return (
+                                    <View key={index} style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', width: 6, marginHorizontal: 1, position: 'relative' }}>
+                                        {/* Wave Bar */}
+                                        <PlaybackWaveBar height={normalizeWave(db)} isPlaying={!isPaused} />
+                                        
+                                        {/* --- ABSOLUTE FLAG CONTAINER --- */}
+                                        {/* Using absolute position to prevent squeezing the icon inside the 6px width */}
+                                        {/* 6px genişliğin içinde ikonun sıkışmasını önlemek için absolute pozisyon kullanılıyor */}
+                                        {hasFlag && (
+                                            <View style={{ 
+                                                position: 'absolute', 
+                                                bottom: -22, // Push below the bar / Çubuğun altına it
+                                                width: 20,   // Give it full width needed / İhtiyaç duyulan tam genişliği ver
+                                                left: -7,    // Center relative to the 6px bar ((6 - 20) / 2 = -7) / 6px çubuğa göre ortala
+                                                alignItems: 'center',
+                                                zIndex: 10
+                                            }}>
+                                                <Ionicons name="flag" size={18} color="#F5A623" />
+                                            </View>
+                                        )}
+                                    </View>
+                                );
+                            })}
                          </ScrollView>
                      </View>
                  </Animated.View>
             ) 
             /* FILE PREVIEW */
-            /* DOSYA ÖNİZLEME */
             : selectedFile ? (
                 <View style={styles.filePreviewCard}>
                     <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
@@ -91,6 +136,7 @@ export const Visualizer = ({
                             </View>
                             <Text style={[styles.fileStatus, dynamicSize(12)]}>{(playingId === 'preview' && isPlaying) ? t('processing') : t('alert_ready')}</Text>
                             
+                            {/* PREVIEW WAVEFORM */}
                             {metering.length > 0 && (
                                 <View style={styles.miniWaveformContainer}>
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }}>
@@ -108,7 +154,6 @@ export const Visualizer = ({
                 </View>
             ) 
             /* IDLE STATE */
-            /* BOŞTA DURUMU */
             : (
                 <View style={styles.idleWaveContainer}>
                     {[...Array(5)].map((_, index) => (<AnimatedWaveBar key={index} />))}

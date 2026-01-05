@@ -1,4 +1,4 @@
-# app.py
+# src/app.py
 
 import os
 import uuid
@@ -31,6 +31,7 @@ def create_app():
     db.init_app(app) 
     
     with app.app_context():
+        # WARNING: If table conflict occurs, delete the old .db file.
         # UYARI: Tablo çakışması olursa eski .db dosyasını silin.
         db.create_all() 
     
@@ -153,30 +154,35 @@ def create_app():
         val_exclusive = data.get("focusExclusive") or data.get("focus_exclusive")
         if str(val_exclusive).lower() == "true": job.focus_exclusive = True
         elif str(val_exclusive).lower() == "false": job.focus_exclusive = False
+
+        # --- SAVE INPUT FLAGS ---
+        # --- GİRİŞ BAYRAKLARINI KAYDET ---
+        val_flags = data.get("input_flags")
+        if val_flags: 
+            job.flags = val_flags
         
         try:
             job.status = "processing"
             job.error_message = None
             db.session.commit()
             
-            # PIPELINE ÇALIŞTIRILIYOR
+            # RUN PIPELINE (Now passing flags)
+            # PIPELINE'I ÇALIŞTIR (Artık bayraklar gönderiliyor)
             out = run_whisper_and_agent(
                 audio_path=job.audio_path,
                 summary_lang=job.summary_lang,
                 transcript_lang=job.transcript_lang,
                 keywords=job.input_keywords,
-                focus_exclusive=job.focus_exclusive
+                focus_exclusive=job.focus_exclusive,
+                flags=job.flags # Pass flags to pipeline / Bayrakları pipeline'a ilet
             )
             
             job.conversation_type = out.get("conversation_type", "unknown")
             job.summary = out.get("summary", "unknown")
             job.keypoints_json = json.dumps(out.get("keypoints", []), ensure_ascii=False)
             
-            # --- FIX: SEGMENTLERİ YAKALA VE KAYDET ---
-            # Pipeline'dan gelen veriyi al
             segments_data = out.get("segments", []) or out.get("transcript_segments", [])
             
-            # Veritabanına yazmayı dene (Sütun varsa yazar, yoksa devam eder)
             try:
                 job.segments = segments_data
             except:
@@ -190,8 +196,6 @@ def create_app():
             job.run_count += 1
             db.session.commit()
 
-            # --- CRITICAL FIX: TELEFONA GİDEN PAKETE ZORLA EKLE ---
-            # Veritabanında kaybolsa bile burada JSON içine elle koyuyoruz.
             response_payload = job.to_dict()
             response_payload['segments'] = segments_data 
             

@@ -1,4 +1,4 @@
-# pipeline.py
+# src/pipeline.py
 
 from typing import Dict, Any, List
 from diarize_agent.agent import analyze_audio_segments_with_gemini
@@ -9,10 +9,13 @@ def run_whisper_and_agent(
     summary_lang: str = "original",
     transcript_lang: str = "original",
     keywords: str = None,
-    focus_exclusive: bool = False
+    focus_exclusive: bool = False,
+    flags: List[float] = None # NEW PARAMETER / YENİ PARAMETRE
 ) -> Dict[str, Any]:
     
     print(f"\n--- 🔍 DEBUG STARTED: {audio_path} ---")
+    if flags:
+        print(f"🚩 Input Flags Received: {flags}")
 
     # 1. Transcribe the audio file
     # 1. Ses dosyasını transkribe et
@@ -35,7 +38,7 @@ def run_whisper_and_agent(
         print("✅ Whisper returned 'List' directly.")
     else:
         print(f"⚠️ WHISPER FOUND NO SEGMENTS! Data: {transcription}")
-        segments_to_process = [] # Prevent crash with empty list / Boş liste ile çökmesini önle
+        segments_to_process = [] 
 
     # Print segment count
     # Segment sayısını yazdır
@@ -75,6 +78,10 @@ def run_whisper_and_agent(
         else:
             print("⚠️ Gemini did not return segments! Adding original Whisper segments as fallback.")
             analysis_result["segments"] = segments_to_process if segments_to_process is not None else []
+        
+        # Inject flags into result for safety
+        # Güvenlik için bayrakları sonuca ekle
+        analysis_result["flags"] = flags or []
             
         print(f"📦 Final Package Segment Status: {len(analysis_result.get('segments', []))} items.")
     

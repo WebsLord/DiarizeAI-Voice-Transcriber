@@ -1,4 +1,4 @@
-# models.py
+# src/models.py
 
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
@@ -51,12 +51,8 @@ class Job(db.Model):
     clean_transcript = db.Column(db.Text, nullable=True)
     keypoints_json = db.Column(db.Text, nullable=True)
     
-    # --- FIX: SEGMENTS COLUMN (JSON TYPE) ---
-    # --- DÜZELTME: SEGMENT SÜTUNU (JSON TİPİ) ---
     # Stores detailed list: [{start, end, speaker, text}, ...]
     # Detaylı listeyi saklar: [{start, end, speaker, text}, ...]
-    # app.py tries to save to 'job.segments', so we must name it 'segments'.
-    # app.py 'job.segments'e kaydetmeye çalıştığı için adını 'segments' koymalıyız.
     segments = db.Column(db.JSON, nullable=True)
 
     status = db.Column(db.Text, nullable=False, default='uploaded')
@@ -65,10 +61,14 @@ class Job(db.Model):
 
     # --- NEW FIELDS FOR PROMPT ENGINEERING ---
     # --- PROMPT MÜHENDİSLİĞİ İÇİN YENİ ALANLAR ---
-    summary_lang = db.Column(db.String(10), default="original") # tr, en, original
+    summary_lang = db.Column(db.String(10), default="original") 
     transcript_lang = db.Column(db.String(10), default="original")
-    input_keywords = db.Column(db.Text, nullable=True) # "Exam // Final"
-    focus_exclusive = db.Column(db.Boolean, default=False) # Only focus on keywords?
+    input_keywords = db.Column(db.Text, nullable=True) 
+    focus_exclusive = db.Column(db.Boolean, default=False) 
+
+    # --- NEW: User Flags (Timestamps) ---
+    # --- YENİ: Kullanıcı Bayrakları (Zaman Damgaları) ---
+    flags = db.Column(db.JSON, default=[])
 
     created_at = db.Column(
         db.DateTime, nullable=False,
@@ -95,6 +95,10 @@ class Job(db.Model):
                 # Segmentleri doğrudan döndür (SQLAlchemy JSON'u halleder)
                 "segments": self.segments,
                 
+                # Return flags
+                # Bayrakları döndür
+                "flags": self.flags or [],
+
                 "status": self.status,
                 "error_message": self.error_message,
                 "run_count": self.run_count,

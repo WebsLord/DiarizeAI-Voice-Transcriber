@@ -8,14 +8,15 @@ import { useTranslation } from 'react-i18next';
 import styles from '../../styles/AppStyles';
 import { PulsingGlowButton } from '../PulsingButton';
 
-// Added fontScale, onSettingsPress and isFileSaved props
-// fontScale, onSettingsPress ve isFileSaved özellikleri eklendi
+// Added fontScale, onSettingsPress, isFileSaved and handleAddFlag props
+// fontScale, onSettingsPress, isFileSaved ve handleAddFlag özellikleri eklendi
 export const Controls = ({ 
     selectedFile, isRecording, isPaused, isProcessing,
     pickFile, saveRecordingToDevice, handleProcessPress,
     handleTrashPress, resumeRecording, pauseRecording, stopRecording, handleRecordPress,
-    onSettingsPress, // NEW PROP / YENİ ÖZELLİK
-    isFileSaved,     // NEW PROP: Check if file is saved locally / YENİ: Dosyanın yerelde kayıtlı olup olmadığını kontrol et
+    onSettingsPress, 
+    isFileSaved,     
+    handleAddFlag,   
     fontScale = 1
 }) => {
     
@@ -25,13 +26,12 @@ export const Controls = ({
     // Dinamik yazı boyutu için yardımcı
     const dynamicSize = (size) => ({ fontSize: size * fontScale });
 
-    // --- ANIMATION FOR SAVE BUTTON (Pulse Effect) ---
-    // --- KAYDET BUTONU İÇİN ANİMASYON (Nabız Efekti) ---
+    // --- ANIMATION REFS ---
     const saveOpacity = useRef(new Animated.Value(1)).current;
+    const flagScale = useRef(new Animated.Value(1)).current; // For Flag Button Animation
 
+    // --- SAVE BUTTON PULSE LOGIC ---
     useEffect(() => {
-        // If file is selected BUT not saved, and not recording -> Pulse animation
-        // Dosya seçiliyse AMA kaydedilmediyse ve kayıt yapılmıyorsa -> Nabız animasyonu
         if (selectedFile && !isFileSaved && !isRecording) {
             Animated.loop(
                 Animated.sequence([
@@ -40,16 +40,31 @@ export const Controls = ({
                 ])
             ).start();
         } else {
-            // Stop animation and reset
-            // Animasyonu durdur ve sıfırla
             saveOpacity.setValue(1); 
         }
     }, [selectedFile, isFileSaved, isRecording]);
 
+    // --- FLAG BUTTON HANDLER WITH ANIMATION ---
+    // --- ANİMASYONLU BAYRAK BUTONU İŞLEYİCİSİ ---
+    const onFlagPress = () => {
+        // 1. Play Animation (Snappy Bounce)
+        // 1. Animasyonu Oynat (Hızlı Sıçrama)
+        flagScale.setValue(0.8); // Start smaller / Daha küçük başla
+        Animated.spring(flagScale, {
+            toValue: 1,
+            friction: 3,
+            tension: 40,
+            useNativeDriver: true
+        }).start();
+
+        // 2. Call original function (Logic handles debounce)
+        // 2. Orijinal fonksiyonu çağır (Mantık debounce işlemini halleder)
+        if (handleAddFlag) handleAddFlag();
+    };
+
     return (
         <View style={styles.controlsContainer}>
             {/* UPLOAD BUTTON */}
-            {/* YÜKLEME BUTONU */}
             {!selectedFile && !isRecording && !isPaused ? (
                 <TouchableOpacity style={styles.uploadButton} onPress={pickFile}>
                     <FontAwesome5 name="cloud-upload-alt" size={24} color="#A0A0A0" />
@@ -58,19 +73,15 @@ export const Controls = ({
             ) : null}
             
             {/* ACTION BUTTONS */}
-            {/* İŞLEM BUTONLARI */}
             {selectedFile && !isRecording && (
                 <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
                     
-                    {/* 1. SAVE LOCAL BUTTON (Animated) */}
-                    {/* 1. YEREL KAYDET BUTONU (Animasyonlu) */}
+                    {/* SAVE LOCAL BUTTON */}
                     <Animated.View style={{ opacity: isFileSaved ? 1 : saveOpacity }}>
                         <TouchableOpacity 
                             style={[
                                 styles.actionButton, 
                                 { 
-                                    // If saved: Standard Grey. If NOT saved: Greenish hint to encourage saving.
-                                    // Kaydedildiyse: Standart Gri. Kaydedilmediyse: Kaydetmeye teşvik için yeşilimsi.
                                     backgroundColor: isFileSaved ? '#333' : '#1E3A2F', 
                                     borderColor: isFileSaved ? 'transparent' : '#50E3C2',
                                     borderWidth: isFileSaved ? 0 : 2,
@@ -87,8 +98,7 @@ export const Controls = ({
                         </TouchableOpacity>
                     </Animated.View>
 
-                    {/* 2. SETTINGS BUTTON (NEW) */}
-                    {/* AYARLAR BUTONU (YENİ) */}
+                    {/* SETTINGS BUTTON */}
                     <TouchableOpacity 
                         style={[styles.actionButton, {backgroundColor: '#333', paddingHorizontal: 15}]} 
                         onPress={onSettingsPress}
@@ -96,22 +106,19 @@ export const Controls = ({
                         <Ionicons name="options" size={24} color="#4A90E2" />
                     </TouchableOpacity>
     
-                    {/* 3. PROCESS BUTTON (Blocked if not saved) */}
-                    {/* 3. İŞLE BUTONU (Kaydedilmediyse engellenir) */}
+                    {/* PROCESS BUTTON */}
                     <TouchableOpacity 
                         style={[
                             styles.actionButton, 
                             styles.sendButton, 
-                            // Opacity logic: Processing OR Not Saved
-                            // Opaklık mantığı: İşleniyor VEYA Kaydedilmedi
                             (isProcessing || !isFileSaved) && {
                                 opacity: 0.6,
-                                backgroundColor: !isFileSaved ? '#552222' : '#4A90E2' // Red hint if locked / Kilitliyse kırmızı ipucu
+                                backgroundColor: !isFileSaved ? '#552222' : '#4A90E2' 
                             }, 
-                            { flex: 1, justifyContent: 'center' } // Center content explicitly / İçeriği ortala
+                            { flex: 1, justifyContent: 'center' }
                         ]} 
                         onPress={handleProcessPress}
-                        disabled={isProcessing || !isFileSaved} // DISABLE IF NOT SAVED / KAYDEDİLMEDİYSE DEVRE DIŞI BIRAK
+                        disabled={isProcessing || !isFileSaved} 
                     >
                         {isProcessing ? (
                             <ActivityIndicator color="#FFF" size="small" />
@@ -125,19 +132,33 @@ export const Controls = ({
                 </View>
             )}
     
-            {/* RECORDING CONTROLS */}
-            {/* KAYIT KONTROLLERİ */}
+            {/* RECORDING / PLAYBACK CONTROLS */}
             {(isRecording || isPaused) ? (
                 <View style={styles.recordingControls}>
+                    {/* Trash Button */}
                     <TouchableOpacity style={styles.smallControlBtn} onPress={handleTrashPress}>
                         <Ionicons name="trash-outline" size={24} color="#FF4B4B" />
                     </TouchableOpacity>
     
+                    {/* --- FLAG BUTTON (ANIMATED) --- */}
+                    {/* --- BAYRAK BUTONU (ANİMASYONLU) --- */}
+                    <Animated.View style={{ transform: [{ scale: flagScale }] }}>
+                        <TouchableOpacity 
+                            style={[styles.smallControlBtn, { borderColor: '#F5A623', borderWidth: 2 }]} 
+                            onPress={onFlagPress}
+                            activeOpacity={0.7}
+                        >
+                            <FontAwesome5 name="flag" size={20} color="#F5A623" solid />
+                        </TouchableOpacity>
+                    </Animated.View>
+
+                    {/* Play/Pause Button */}
                     <TouchableOpacity style={[styles.smallControlBtn, {width: 60, height: 60, borderRadius: 30, backgroundColor: '#4A90E2', borderColor: '#4A90E2'}]} 
                         onPress={isPaused ? resumeRecording : pauseRecording}>
                         <FontAwesome5 name={isPaused ? "play" : "pause"} size={24} color="white" />
                     </TouchableOpacity>
     
+                    {/* Stop Button */}
                     <TouchableOpacity onPress={stopRecording}>
                         <PulsingGlowButton onPress={stopRecording} isRecording={true} />
                     </TouchableOpacity>

@@ -27,7 +27,7 @@ import { Controls } from '../components/dashboard/Controls';
 import { RecordsModal } from '../components/RecordsModal';
 import { AnalysisModal } from '../components/AnalysisModal';
 import { SettingsModal } from '../components/SettingsModal';
-import { ProcessSettingsModal } from '../components/ProcessSettingsModal'; // IMPORT NEW MODAL
+import { ProcessSettingsModal } from '../components/ProcessSettingsModal'; 
 
 const { width } = Dimensions.get('window');
 const MENU_WIDTH = width * 0.75; 
@@ -43,26 +43,29 @@ export default function HomeScreen({ navigation }) {
       startRecording, stopRecording, pauseRecording, resumeRecording, discardRecording,
       playSound, stopSound, saveRecordingToDevice, deleteRecording, clearAllRecordings,
       pickFile, loadFromLibrary, clearSelection, shareFile, shareFileUri, renameRecording,
-      isFileSaved // --- NEW: Get Saved Status from Hook --- / --- YENİ: Kayıt Durumunu Hook'tan Al ---
+      isFileSaved,
+      // --- NEW: Flags & Add Flag ---
+      // --- YENİ: Bayraklar & Bayrak Ekleme ---
+      flags, 
+      addFlag
   } = useAudioLogic();
 
   // UI States
   const [isRecordsVisible, setIsRecordsVisible] = useState(false); 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [isAnalysisVisible, setIsAnalysisVisible] = useState(false);
-  const [isProcessSettingsVisible, setIsProcessSettingsVisible] = useState(false); // NEW STATE
+  const [isProcessSettingsVisible, setIsProcessSettingsVisible] = useState(false);
   
   // Processing States
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
   // Process Settings Data
-  // İşlem Ayarları Verisi
   const [processSettings, setProcessSettings] = useState({
-      summaryLang: 'tr',      // Default Turkish Summary
-      transcriptLang: 'original', // Default Original Transcript
-      keywords: '',            // No keywords initially
-      focusExclusive: false    // Default Focus Mode
+      summaryLang: 'tr',      
+      transcriptLang: 'original',
+      keywords: '',            
+      focusExclusive: false    
   });
 
   // Rename States
@@ -134,9 +137,6 @@ export default function HomeScreen({ navigation }) {
   
   const handleProcessPress = async () => {
     // --- TRAFFIC LIGHT CHECK ---
-    // --- TRAFİK IŞIĞI KONTROLÜ ---
-    // Prevent processing if file is not saved locally
-    // Dosya yerel olarak kaydedilmediyse işlemeyi engelle
     if (!isFileSaved) {
         Alert.alert(t('alert_error'), "Lütfen işlem yapmadan önce dosyayı kaydedin.");
         return;
@@ -155,24 +155,28 @@ export default function HomeScreen({ navigation }) {
         const uploadResult = await apiService.uploadAudio(selectedFile.uri);
         const jobId = uploadResult.id; 
         
-        // Start Processing (Phase 2: Pass processSettings to backend)
-        // İşlemi Başlat (Faz 2: processSettings'i backend'e gönder)
+        // Start Processing
         setStatusMessage(t('alert_sending'));
         
-        // --- FIX IS HERE: Passing 'processSettings' as the second argument ---
-        // --- DÜZELTME BURADA: 'processSettings' ikinci argüman olarak gönderiliyor ---
-        await apiService.startProcessing(jobId, processSettings);
+        // --- PREPARE PAYLOAD WITH FLAGS ---
+        // --- BAYRAKLARI İÇEREN VERİ PAKETİNİ HAZIRLA ---
+        const processingPayload = {
+            ...processSettings,
+            input_flags: flags // Add recorded flags to request / Kaydedilen bayrakları isteğe ekle
+        };
+
+        await apiService.startProcessing(jobId, processingPayload);
 
         // Poll for results
         setStatusMessage("Yapay Zeka düşünüyor...");
         const finalResult = await apiService.pollUntilComplete(jobId);
         
-        // Save Result Locally + Include Settings used!
-        // Sonucu Yerel Olarak Kaydet + Kullanılan ayarları dahil et!
+        // Save Result Locally
         const resultToSave = {
             ...finalResult,
             originalName: selectedFile.name || "Audio Recording",
-            usedSettings: processSettings // Save what settings were active / Hangi ayarların aktif olduğunu kaydet
+            usedSettings: processSettings,
+            flags: flags // Also save flags locally for immediate access / Anında erişim için bayrakları yerel olarak da kaydet
         };
 
         await saveAnalysisResult(resultToSave);
@@ -255,10 +259,10 @@ export default function HomeScreen({ navigation }) {
           handleBackPress={handleBackPress}
           isEditingName={isEditingName} newFileName={newFileName} setNewFileName={setNewFileName}
           handleSaveRename={handleSaveRename} startRenaming={startRenaming} shareFile={shareFile}
-          fontScale={fontScale}
+          fontScale={fontScale} flags={flags}
       />
 
-      {/* CONTROLS: Passed settings handler AND saved status */}
+      {/* CONTROLS */}
       <Controls 
           selectedFile={selectedFile} 
           isRecording={isRecording} isPaused={isPaused} isProcessing={isProcessing} 
@@ -267,8 +271,11 @@ export default function HomeScreen({ navigation }) {
           resumeRecording={resumeRecording} pauseRecording={pauseRecording}
           stopRecording={stopRecording} handleRecordPress={handleRecordPress}
           fontScale={fontScale}
-          onSettingsPress={() => setIsProcessSettingsVisible(true)} // OPEN SETTINGS
-          isFileSaved={isFileSaved} // PASS SAVED STATUS TO CONTROLS
+          onSettingsPress={() => setIsProcessSettingsVisible(true)} 
+          isFileSaved={isFileSaved} 
+          // --- NEW PROP PASSED ---
+          // --- YENİ ÖZELLİK AKTARILDI ---
+          handleAddFlag={addFlag}
       />
 
       {isProcessing && (
@@ -298,7 +305,6 @@ export default function HomeScreen({ navigation }) {
         playingId={playingId} isPlaying={isPlaying} fontScale={fontScale}
       />
       
-      {/* NEW: PROCESS SETTINGS MODAL */}
       <ProcessSettingsModal 
         visible={isProcessSettingsVisible}
         onClose={() => setIsProcessSettingsVisible(false)}
