@@ -87,7 +87,33 @@
   "alert_file_relinked": "Datei wiederhergestellt!",
   "alert_delete_confirm": "Möchten Sie die Analyse wirklich löschen?",
   "cancel": "Abbrechen",
-  "delete": "Löschen"
+  "delete": "Löschen",
+
+  "save_first": "Zuerst speichern",
+  "alert_save_first": "Bitte speichern Sie die Datei vor der Verarbeitung.",
+  "alert_no_file": "Bitte nehmen Sie zuerst Audio auf oder wählen Sie es aus.",
+  "status_ai_thinking": "KI denkt nach...",
+  "alert_analysis_saved": "Analyse abgeschlossen und gespeichert!",
+  "alert_process_failed": "Verarbeitung fehlgeschlagen:",
+  "error_unknown": "Unbekannter Fehler",
+  "error_token_invalid": "Token-Fehler.",
+  "error_register_fail": "Registrierung fehlgeschlagen.",
+  "summaries_title": "Zusammenfassungen",
+  "search_placeholder": "Suchbegriff...",
+  "advanced_filters": "Erweiterte Filter",
+  "filter_language": "Sprache",
+  "filter_sort_by": "Sortieren nach",
+  "sort_newest": "Neueste",
+  "sort_oldest": "Älteste",
+  "filter_date": "Datum",
+  "btn_select_date": "Datum wählen",
+  "title_select_date": "Datum auswählen",
+  "btn_done": "Fertig",
+  "no_results_found": "Keine Ergebnisse gefunden.",
+  "no_saved_analysis": "Noch keine gespeicherte Analyse.",
+  "label_title": "TITEL"
+
+  
 
   
 }

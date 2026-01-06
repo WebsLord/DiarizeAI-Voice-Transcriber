@@ -13,16 +13,20 @@ export default function RegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
+    // "E-posta veya şifre boş olamaz" -> t('error_empty')
     if (!username || !email || !password) return Alert.alert(t('alert_error'), t('error_empty'));
 
     setLoading(true);
     try {
       await registerUser({ username, email, password });
+      
+      // "Kayıt Başarılı" -> t('success_register')
       Alert.alert(t('alert_success'), t('success_register'));
       navigation.navigate('Login');
     } catch (error) {
       console.error(error);
-      const msg = error.response?.data?.error || "Kayıt hatası";
+      // "Kayıt hatası" -> t('error_register_fail')
+      const msg = error.response?.data?.error || t('error_register_fail');
       Alert.alert(t('alert_error'), msg);
     } finally {
       setLoading(false);
@@ -33,6 +37,7 @@ export default function RegisterScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>{t('register_title')}</Text>
+        
         <TextInput 
           style={styles.input} 
           placeholder={t('username_placeholder')} 
@@ -40,6 +45,7 @@ export default function RegisterScreen({ navigation }) {
           value={username} 
           onChangeText={setUsername} 
         />
+        
         <TextInput 
           style={styles.input} 
           placeholder={t('email_placeholder')} 
@@ -49,6 +55,7 @@ export default function RegisterScreen({ navigation }) {
           value={email} 
           onChangeText={setEmail} 
         />
+        
         <TextInput 
           style={styles.input} 
           placeholder={t('password_placeholder')} 
@@ -57,9 +64,15 @@ export default function RegisterScreen({ navigation }) {
           value={password} 
           onChangeText={setPassword} 
         />
+        
         <Pressable style={styles.button} onPress={handleRegister} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>{t('btn_register')}</Text>}
+          {loading ? (
+            <ActivityIndicator color="#fff" size="small" /> 
+          ) : (
+            <Text style={styles.btnText}>{t('btn_register')}</Text>
+          )}
         </Pressable>
+        
         <Pressable onPress={() => navigation.navigate('Login')} style={{marginTop: 20}}>
           <Text style={styles.linkText}>{t('has_account')}</Text>
         </Pressable>

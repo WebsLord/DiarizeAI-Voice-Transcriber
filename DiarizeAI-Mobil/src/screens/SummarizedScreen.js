@@ -14,7 +14,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import styles from '../styles/AppStyles'; // Import global styles
 
 // Supported Languages List
-// Desteklenen Diller Listesi
 const LANGUAGES = ['all', 'tr', 'en', 'de', 'es', 'fr', 'it', 'ru', 'pt', 'zh', 'ja', 'ko', 'ar'];
 
 export default function SummarizedScreen({ navigation }) {
@@ -35,10 +34,9 @@ export default function SummarizedScreen({ navigation }) {
     // Date Picker States
     const [selectedDate, setSelectedDate] = useState(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [tempDate, setTempDate] = useState(new Date()); // Temporary date for iOS Modal
+    const [tempDate, setTempDate] = useState(new Date()); 
 
     // Load data on focus
-    // Odaklanıldığında veriyi yükle
     useFocusEffect(
         useCallback(() => {
             loadData();
@@ -55,7 +53,7 @@ export default function SummarizedScreen({ navigation }) {
     const handleDelete = (localId) => {
         Alert.alert(
             t('alert_delete_title'), 
-            t('alert_delete_msg'),
+            t('alert_delete_confirm'), // "Analizi silmek istediğine emin misin?"
             [
                 { text: t('btn_cancel'), style: 'cancel' },
                 { 
@@ -70,14 +68,12 @@ export default function SummarizedScreen({ navigation }) {
         );
     };
 
-    // --- DATE PICKER HANDLER (PLATFORM SPECIFIC) ---
+    // --- DATE PICKER HANDLER ---
     const onDateChange = (event, date) => {
         if (Platform.OS === 'android') {
             setShowDatePicker(false);
             if (date) setSelectedDate(date);
         } else {
-            // iOS: Update temp date only, don't close yet
-            // iOS: Sadece geçici tarihi güncelle, henüz kapatma
             if (date) setTempDate(date);
         }
     };
@@ -150,11 +146,11 @@ export default function SummarizedScreen({ navigation }) {
         let badgeStyle, textStyle, label;
         switch (type) {
             case 'title':
-                badgeStyle = styles.badgeTitle; textStyle = styles.badgeTextTitle; label = t('title') || "BAŞLIK"; break;
+                badgeStyle = styles.badgeTitle; textStyle = styles.badgeTextTitle; label = t('label_title'); break;
             case 'summary':
-                badgeStyle = styles.badgeSummary; textStyle = styles.badgeTextSummary; label = t('summary') || "ÖZET"; break;
+                badgeStyle = styles.badgeSummary; textStyle = styles.badgeTextSummary; label = t('label_summary'); break;
             case 'transcript':
-                badgeStyle = styles.badgeTranscript; textStyle = styles.badgeTextTranscript; label = "TRANSCRIPT"; break;
+                badgeStyle = styles.badgeTranscript; textStyle = styles.badgeTextTranscript; label = t('label_transcript'); break;
             default: return null;
         }
         return (
@@ -194,7 +190,7 @@ export default function SummarizedScreen({ navigation }) {
 
             <View style={localStyles.content}>
                 <Text style={localStyles.summary} numberOfLines={2}>
-                    {item.summary || "Özet yok."}
+                    {item.summary || t('no_summary_available')}
                 </Text>
                 <View style={localStyles.footerTags}>
                     <View style={localStyles.tag}>
@@ -208,13 +204,12 @@ export default function SummarizedScreen({ navigation }) {
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* 1. HEADER (FIXED OVERLAP) */}
+            {/* 1. HEADER */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
                     <Ionicons name="arrow-back" size={24} color="#FFF" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>{t('Summaries') || "Özetler"}</Text>
-                {/* Dummy view to balance center title / Başlığı ortalamak için boş view */}
+                <Text style={styles.headerTitle}>{t('summaries_title')}</Text>
                 <View style={styles.headerBtn} /> 
             </View>
 
@@ -224,7 +219,7 @@ export default function SummarizedScreen({ navigation }) {
                     <Ionicons name="search" size={20} color="#888" />
                     <TextInput 
                         style={styles.searchInput}
-                        placeholder={t('search_placeholder') !== 'search_placeholder' ? t('search_placeholder') : "Aramak istediğiniz kelime..."}
+                        placeholder={t('search_placeholder')}
                         placeholderTextColor="#666"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -237,7 +232,7 @@ export default function SummarizedScreen({ navigation }) {
                 </View>
 
                 <View style={styles.advancedToggleContainer}>
-                    <Text style={styles.advancedLabel}>Advanced Filters</Text>
+                    <Text style={styles.advancedLabel}>{t('advanced_filters')}</Text>
                     <Switch 
                         value={isAdvancedMode}
                         onValueChange={setIsAdvancedMode}
@@ -248,7 +243,7 @@ export default function SummarizedScreen({ navigation }) {
 
                 {isAdvancedMode && (
                     <View style={styles.filtersWrapper}>
-                        <Text style={styles.filterLabel}>Language</Text>
+                        <Text style={styles.filterLabel}>{t('filter_language')}</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
                             {LANGUAGES.map(lang => (
                                 <TouchableOpacity 
@@ -265,25 +260,25 @@ export default function SummarizedScreen({ navigation }) {
 
                         <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginTop: 15}}>
                             <View>
-                                <Text style={styles.filterLabel}>Sort By</Text>
+                                <Text style={styles.filterLabel}>{t('filter_sort_by')}</Text>
                                 <View style={{flexDirection:'row'}}>
                                     <TouchableOpacity 
                                         style={[styles.filterChip, sortOrder === 'newest' && styles.filterChipActive]}
                                         onPress={() => setSortOrder('newest')}
                                     >
-                                        <Text style={[styles.filterText, sortOrder === 'newest' && styles.filterTextActive]}>Newest</Text>
+                                        <Text style={[styles.filterText, sortOrder === 'newest' && styles.filterTextActive]}>{t('sort_newest')}</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity 
                                         style={[styles.filterChip, sortOrder === 'oldest' && styles.filterChipActive]}
                                         onPress={() => setSortOrder('oldest')}
                                     >
-                                        <Text style={[styles.filterText, sortOrder === 'oldest' && styles.filterTextActive]}>Oldest</Text>
+                                        <Text style={[styles.filterText, sortOrder === 'oldest' && styles.filterTextActive]}>{t('sort_oldest')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
 
                             <View>
-                                <Text style={styles.filterLabel}>Specific Date</Text>
+                                <Text style={styles.filterLabel}>{t('filter_date')}</Text>
                                 <View style={{flexDirection:'row', alignItems:'center'}}>
                                     <TouchableOpacity 
                                         style={[styles.filterChip, selectedDate && styles.filterChipActive, {marginRight: 0}]}
@@ -295,7 +290,7 @@ export default function SummarizedScreen({ navigation }) {
                                         <View style={{flexDirection:'row', alignItems:'center'}}>
                                             <Ionicons name="calendar" size={14} color={selectedDate ? "#FFF" : "#888"} style={{marginRight:5}} />
                                             <Text style={[styles.filterText, selectedDate && styles.filterTextActive]}>
-                                                {selectedDate ? selectedDate.toLocaleDateString() : "Select Date"}
+                                                {selectedDate ? selectedDate.toLocaleDateString() : t('btn_select_date')}
                                             </Text>
                                         </View>
                                     </TouchableOpacity>
@@ -312,8 +307,7 @@ export default function SummarizedScreen({ navigation }) {
                 )}
             </View>
 
-            {/* iOS DATE PICKER MODAL (FIX FOR OVERLAY ISSUE) */}
-            {/* iOS TARİH SEÇİCİ MODALI (ÇAKIŞMA SORUNU DÜZELTMESİ) */}
+            {/* iOS DATE PICKER MODAL */}
             {Platform.OS === 'ios' && (
                 <Modal
                     transparent={true}
@@ -324,11 +318,11 @@ export default function SummarizedScreen({ navigation }) {
                         <View style={styles.datePickerContainer}>
                             <View style={styles.datePickerToolbar}>
                                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                                    <Text style={styles.datePickerCancelText}>Cancel</Text>
+                                    <Text style={styles.datePickerCancelText}>{t('btn_cancel')}</Text>
                                 </TouchableOpacity>
-                                <Text style={styles.datePickerTitle}>Select Date</Text>
+                                <Text style={styles.datePickerTitle}>{t('title_select_date')}</Text>
                                 <TouchableOpacity onPress={confirmIOSDate}>
-                                    <Text style={styles.datePickerDoneText}>Done</Text>
+                                    <Text style={styles.datePickerDoneText}>{t('btn_done')}</Text>
                                 </TouchableOpacity>
                             </View>
                             <DateTimePicker
@@ -338,14 +332,13 @@ export default function SummarizedScreen({ navigation }) {
                                 onChange={onDateChange}
                                 maximumDate={new Date()}
                                 themeVariant="dark" 
-                                style={{ height: 120 }} // iOS Spinner height fix
+                                style={{ height: 120 }} 
                             />
                         </View>
                     </View>
                 </Modal>
             )}
 
-            {/* ANDROID DATE PICKER (Invisible logic) */}
             {Platform.OS === 'android' && showDatePicker && (
                  <DateTimePicker
                     value={selectedDate || new Date()}
@@ -366,7 +359,7 @@ export default function SummarizedScreen({ navigation }) {
                         <View style={localStyles.emptyContainer}>
                             <MaterialIcons name="search-off" size={64} color="#333" />
                             <Text style={localStyles.emptyText}>
-                                {searchQuery ? "Sonuç bulunamadı." : "Henüz kayıtlı analiz yok."}
+                                {searchQuery ? t('no_results_found') : t('no_saved_analysis')}
                             </Text>
                         </View>
                     )

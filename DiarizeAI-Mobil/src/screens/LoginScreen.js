@@ -2,10 +2,9 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, Modal, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useTranslation } from 'react-i18next'; 
-import { loginUser } from '../api/auth'; // src/api/auth.js varsayılıyor
+import { loginUser } from '../api/auth'; 
 import { storeToken } from '../api/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
-// DÜZELTME: Artık src içindeyiz, tekrar src demeye gerek yok.
 import { LANGUAGES } from '../services/i18n'; 
 
 export default function LoginScreen({ navigation }) {
@@ -40,7 +39,8 @@ export default function LoginScreen({ navigation }) {
          
          navigation.replace('Home');
       } else {
-         Alert.alert(t('alert_error'), "Token hatası.");
+         // Localized: "Token hatası." -> t('error_token_invalid')
+         Alert.alert(t('alert_error'), t('error_token_invalid'));
       }
     } catch (error) {
       console.error(error);

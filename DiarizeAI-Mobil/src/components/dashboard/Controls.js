@@ -126,7 +126,7 @@ export const Controls = ({
                             <FontAwesome5 name={!isFileSaved ? "lock" : "paper-plane"} size={20} color="white" />
                         )}
                         <Text style={[styles.uploadText, {color: 'white', marginLeft: 8}, dynamicSize(16)]}>
-                            {!isFileSaved ? "Önce Kaydet" : (isProcessing ? t('processing') : t('process'))}
+                            {!isFileSaved ? t('save_first') : (isProcessing ? t('processing') : t('process'))}
                         </Text>
                     </TouchableOpacity>
                 </View>

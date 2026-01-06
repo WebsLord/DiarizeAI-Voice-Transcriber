@@ -87,6 +87,38 @@
   "alert_file_relinked": "Dosya geri yüklendi!",
   "alert_delete_confirm": "Analizi silmek istediğine emin misin?",
   "cancel": "İptal",
-  "delete": "Sil"
+  "delete": "Sil",
+
+  "save_first": "Önce kaydet",
+  "alert_save_first": "Lütfen işlem yapmadan önce dosyayı kaydedin.",
+  "alert_no_file": "Lütfen önce ses kaydedin veya seçin.",
+  "status_ai_thinking": "Yapay Zeka düşünüyor...",
+  "alert_analysis_saved": "Analiz tamamlandı ve kaydedildi!",
+  "alert_process_failed": "İşlem başarısız:",
+  "error_unknown": "Bilinmeyen hata",
+  "error_token_invalid": "Token hatası.",
+  "error_register_fail": "Kayıt başarısız oldu.",
+  "summaries_title": "Özetler",
+  "search_placeholder": "Aramak istediğiniz kelime...",
+  "advanced_filters": "Gelişmiş Filtreler",
+  "filter_language": "Dil",
+  "filter_sort_by": "Sıralama",
+  "sort_newest": "En Yeni",
+  "sort_oldest": "En Eski",
+  "filter_date": "Tarih",
+  "btn_select_date": "Tarih Seç",
+  "title_select_date": "Tarih Seçin",
+  "btn_done": "Tamam",
+  "no_results_found": "Sonuç bulunamadı.",
+  "no_saved_analysis": "Henüz kayıtlı analiz yok.",
+  "label_title": "BAŞLIK"
+ 
+
+
+  
+ 
 
 }
+
+  
+

@@ -44,8 +44,6 @@ export default function HomeScreen({ navigation }) {
       playSound, stopSound, saveRecordingToDevice, deleteRecording, clearAllRecordings,
       pickFile, loadFromLibrary, clearSelection, shareFile, shareFileUri, renameRecording,
       isFileSaved,
-      // --- NEW: Flags & Add Flag ---
-      // --- YENİ: Bayraklar & Bayrak Ekleme ---
       flags, 
       addFlag
   } = useAudioLogic();
@@ -62,7 +60,7 @@ export default function HomeScreen({ navigation }) {
 
   // Process Settings Data
   const [processSettings, setProcessSettings] = useState({
-      summaryLang: 'tr',      
+      summaryLang: 'original',      
       transcriptLang: 'original',
       keywords: '',            
       focusExclusive: false    
@@ -138,12 +136,14 @@ export default function HomeScreen({ navigation }) {
   const handleProcessPress = async () => {
     // --- TRAFFIC LIGHT CHECK ---
     if (!isFileSaved) {
-        Alert.alert(t('alert_error'), "Lütfen işlem yapmadan önce dosyayı kaydedin.");
+        // "Lütfen işlem yapmadan önce dosyayı kaydedin."
+        Alert.alert(t('alert_error'), t('alert_save_first'));
         return;
     }
 
     if (!selectedFile || !selectedFile.uri) {
-        Alert.alert(t('alert_error'), "Lütfen önce ses kaydedin veya seçin.");
+        // "Lütfen önce ses kaydedin veya seçin."
+        Alert.alert(t('alert_error'), t('alert_no_file'));
         return;
     }
 
@@ -159,16 +159,16 @@ export default function HomeScreen({ navigation }) {
         setStatusMessage(t('alert_sending'));
         
         // --- PREPARE PAYLOAD WITH FLAGS ---
-        // --- BAYRAKLARI İÇEREN VERİ PAKETİNİ HAZIRLA ---
         const processingPayload = {
             ...processSettings,
-            input_flags: flags // Add recorded flags to request / Kaydedilen bayrakları isteğe ekle
+            input_flags: flags 
         };
 
         await apiService.startProcessing(jobId, processingPayload);
 
         // Poll for results
-        setStatusMessage("Yapay Zeka düşünüyor...");
+        // "Yapay Zeka düşünüyor..."
+        setStatusMessage(t('status_ai_thinking'));
         const finalResult = await apiService.pollUntilComplete(jobId);
         
         // Save Result Locally
@@ -176,20 +176,22 @@ export default function HomeScreen({ navigation }) {
             ...finalResult,
             originalName: selectedFile.name || "Audio Recording",
             usedSettings: processSettings,
-            flags: flags // Also save flags locally for immediate access / Anında erişim için bayrakları yerel olarak da kaydet
+            flags: flags 
         };
 
         await saveAnalysisResult(resultToSave);
 
         setStatusMessage(t('alert_success'));
-        Alert.alert(t('alert_success'), "Analiz tamamlandı ve kaydedildi!");
+        // "Analiz tamamlandı ve kaydedildi!"
+        Alert.alert(t('alert_success'), t('alert_analysis_saved'));
         
         navigation.navigate('ResultScreen', { data: resultToSave });
 
     } catch (error) {
         console.error("Süreç Hatası:", error);
         setStatusMessage(t('alert_error'));
-        Alert.alert(t('alert_error'), "İşlem başarısız: " + (error.message || "Bilinmeyen hata"));
+        // "İşlem başarısız: " + (error.message || "Bilinmeyen hata")
+        Alert.alert(t('alert_error'), t('alert_process_failed') + " " + (error.message || t('error_unknown')));
     } finally {
         setIsProcessing(false);
         setTimeout(() => setStatusMessage(""), 3000);
@@ -273,8 +275,6 @@ export default function HomeScreen({ navigation }) {
           fontScale={fontScale}
           onSettingsPress={() => setIsProcessSettingsVisible(true)} 
           isFileSaved={isFileSaved} 
-          // --- NEW PROP PASSED ---
-          // --- YENİ ÖZELLİK AKTARILDI ---
           handleAddFlag={addFlag}
       />
 

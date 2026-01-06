@@ -85,6 +85,29 @@
   "alert_file_relinked": "تم استعادة الملف!",
   "alert_delete_confirm": "هل أنت متأكد من رغبتك في حذف التحليل؟",
   "cancel": "يلغي",
-  "delete": "يمسح"
-  
+  "delete": "يمسح",
+
+  "save_first": "حفظ أولاً،",
+  "alert_save_first": "يرجى حفظ الملف قبل المتابعة.",
+  "alert_no_file": "يرجى تسجيل الصوت أو تحديده أولاً.",
+  "status_ai_thinking": "الذكاء الاصطناعي يفكر...",
+  "alert_analysis_saved": "اكتمل التحليل وتم حفظه!",
+  "alert_process_failed": "فشلت العملية:",
+  "error_unknown": "خطأ غير معروف",
+  "error_token_invalid": "خطأ في الرمز المميز.",
+  "error_register_fail": "فشل التسجيل.",
+  "summaries_title": "الملخصات",
+  "search_placeholder": "الكلمة التي تريد البحث عنها...",
+  "advanced_filters": "الفلاتر المتقدمة،",
+  "filter_language": "اللغة",
+  "filter_sort_by": "فرز،",
+  "sort_newest": "الأحدث",
+  "sort_oldest": "الأقدم",
+  "filter_date": "التاريخ",
+  "btn_select_date": "تحديد التاريخ",
+  "title_select_date": "تحديد التاريخ",
+  "btn_done": "موافق",
+  "no_results_found": "لم يتم العثور على نتائج.",
+  "no_saved_analysis": "لا توجد تحليلات محفوظة حتى الآن.",
+  "label_title": "العنوان"
 }
