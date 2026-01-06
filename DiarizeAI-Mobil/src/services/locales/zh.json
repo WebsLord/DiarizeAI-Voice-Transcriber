@@ -110,5 +110,9 @@
   "btn_done": "完成",
   "no_results_found": "未找到结果。",
   "no_saved_analysis": "暂无保存的分析。",
-  "label_title": "标题"
+  "label_title": "标题",
+
+  "token_could_not_be_stored": "无法保存令牌：",
+  "token_could_not_be_read": "无法读取令牌：",
+  "the_token_could_not_be_deleted.": "无法删除令牌。"
 }

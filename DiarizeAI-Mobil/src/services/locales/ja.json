@@ -110,5 +110,9 @@
   "btn_done": "完了",
   "no_results_found": "結果が見つかりませんでした。",
   "no_saved_analysis": "保存された分析はまだありません。",
-  "label_title": "タイトル"
+  "label_title": "タイトル",
+
+  "token_could_not_be_stored": "トークンを保存できませんでした:",
+  "token_could_not_be_read": "トークンを読み込めませんでした:",
+  "the_token_could_not_be_deleted.": "トークンを削除できませんでした。"
 }

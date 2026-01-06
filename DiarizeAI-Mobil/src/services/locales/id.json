@@ -110,5 +110,9 @@
   "btn_done": "Selesai",
   "no_results_found": "Tidak ada hasil ditemukan.",
   "no_saved_analysis": "Belum ada analisis tersimpan.",
-  "label_title": "JUDUL"
+  "label_title": "JUDUL",
+
+  "token_could_not_be_stored": "Token tidak dapat disimpan:",
+  "token_could_not_be_read": "Token tidak dapat dibaca:",
+  "the_token_could_not_be_deleted.": "Token tidak dapat dihapus."
 }

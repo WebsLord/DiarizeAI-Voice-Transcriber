@@ -110,5 +110,9 @@
   "btn_done": "Terminé",
   "no_results_found": "Aucun résultat trouvé.",
   "no_saved_analysis": "Aucune analyse enregistrée pour le moment.",
-  "label_title": "TITRE"
+  "label_title": "TITRE",
+
+  "token_could_not_be_stored": "Le jeton n'a pas pu être enregistré :",
+  "token_could_not_be_read": "Le jeton n'a pas pu être lu :",
+  "the_token_could_not_be_deleted.": "Le jeton n'a pas pu être supprimé."
 }

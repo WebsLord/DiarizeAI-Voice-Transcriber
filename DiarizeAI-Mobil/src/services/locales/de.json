@@ -111,9 +111,11 @@
   "btn_done": "Fertig",
   "no_results_found": "Keine Ergebnisse gefunden.",
   "no_saved_analysis": "Noch keine gespeicherte Analyse.",
-  "label_title": "TITEL"
+  "label_title": "TITEL",
 
-  
+  "token_could_not_be_stored": "Token konnte nicht gespeichert werden:",
+  "token_could_not_be_read": "Token konnte nicht gelesen werden:",
+  "the_token_could_not_be_deleted.": "Token konnte nicht gelöscht werden."
 
   
 }

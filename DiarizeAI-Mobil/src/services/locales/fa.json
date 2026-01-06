@@ -110,5 +110,9 @@
   "btn_done": "انجام شد",
   "no_results_found": "نتیجه ای یافت نشد.",
   "no_saved_analysis": "هنوز تحلیلی ذخیره نشده است.",
-  "label_title": "عنوان"
+  "label_title": "عنوان",
+
+  "token_could_not_be_stored": "توکن ذخیره نشد:",
+  "token_could_not_be_read": "توکن خوانده نشد:",
+  "the_token_could_not_be_deleted.": "توکن حذف نشد."
 }

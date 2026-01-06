@@ -110,5 +110,9 @@
   "btn_done": "Tamam",
   "no_results_found": "Nəticə tapılmadı.",
   "no_saved_analysis": "Hələ yadda saxlanılan analiz yoxdur.",
-  "label_title": "BAŞLIQ"
+  "label_title": "BAŞLIQ",
+  
+  "token_could_not_be_stored": "Token yadda saxlanıla bilmədi:",
+  "token_could_not_be_read": "Token oxuna bilmədi:",
+  "the_token_could_not_be_deleted.": "Token silinə bilmədi."
 }

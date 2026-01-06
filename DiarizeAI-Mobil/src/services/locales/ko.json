@@ -110,5 +110,9 @@
   "btn_done": "완료",
   "no_results_found": "결과를 찾을 수 없습니다.",
   "no_saved_analysis": "저장된 분석이 아직 없습니다.",
-  "label_title": "제목"
+  "label_title": "제목",
+
+  "token_could_not_be_stored": "토큰을 저장할 수 없습니다:",
+  "token_could_not_be_read": "토큰을 읽을 수 없습니다:",
+  "the_token_could_not_be_deleted.": "토큰을 삭제할 수 없습니다."
 }

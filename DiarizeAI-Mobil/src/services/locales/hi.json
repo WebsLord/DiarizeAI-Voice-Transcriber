@@ -111,5 +111,9 @@
   "btn_done": "हो गया",
   "no_results_found": "कोई परिणाम नहीं मिला।",
   "no_saved_analysis": "अभी तक कोई विश्लेषण सहेजा नहीं गया है।",
-  "label_title": "शीर्षक"
+  "label_title": "शीर्षक",
+
+  "token_could_not_be_stored": "टोकन सहेजा नहीं जा सका:",
+  "token_could_not_be_read": "टोकन पढ़ा नहीं जा सका:",
+  "the_token_could_not_be_deleted.": "टोकन हटाया नहीं जा सका।"
 }

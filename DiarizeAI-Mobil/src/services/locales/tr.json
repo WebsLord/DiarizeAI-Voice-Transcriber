@@ -111,8 +111,11 @@
   "btn_done": "Tamam",
   "no_results_found": "Sonuç bulunamadı.",
   "no_saved_analysis": "Henüz kayıtlı analiz yok.",
-  "label_title": "BAŞLIK"
- 
+  "label_title": "BAŞLIK",
+  
+  "token_could_not_be_stored": "Token kaydedilemedi:",
+  "token_could_not_be_read": "Token okunamadı:",
+  "the_token_could_not_be_deleted.": "Token silinemedi."
 
 
   

@@ -110,5 +110,9 @@
   "btn_done": "Готово",
   "no_results_found": "Результаты не найдены.",
   "no_saved_analysis": "Нет сохраненных анализов.",
-  "label_title": "ЗАГОЛОВОК"
+  "label_title": "ЗАГОЛОВОК",
+
+  "token_could_not_be_stored": "Не удалось сохранить токен:",
+  "token_could_not_be_read": "Не удалось прочитать токен:",
+  "the_token_could_not_be_deleted.": "Не удалось удалить токен."
 }

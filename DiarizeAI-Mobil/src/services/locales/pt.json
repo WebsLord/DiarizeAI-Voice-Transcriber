@@ -110,5 +110,9 @@
   "btn_done": "Concluído",
   "no_results_found": "Nenhum resultado encontrado.",
   "no_saved_analysis": "Nenhuma análise salva ainda.",
-  "label_title": "TÍTULO"
+  "label_title": "TÍTULO",
+
+  "token_could_not_be_stored": "O token não pôde ser salvo:",
+  "token_could_not_be_read": "O token não pôde ser lido:",
+  "the_token_could_not_be_deleted.": "O token não pôde ser excluído."
 }
