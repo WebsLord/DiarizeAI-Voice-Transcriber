@@ -80,9 +80,15 @@ ios/
 api.js
 
 diarize_ai_agent.db
+
 instance/
+
 __pycache__/
+
 *.db
+
 *.sqlite3
+
 uploads/
+
 .db
