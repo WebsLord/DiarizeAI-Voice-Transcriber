@@ -63,6 +63,30 @@
   "original": "Orijinal",
   "Summarized": "Özetlenenler",
   
+  
   "hide_highlights": "Önemlileri Gizle",
-  "show_highlights": "Önemlileri Göster"
+  "show_highlights": "Önemlileri Göster",
+  "analysis_karaoke_title": "Analiz & Karaoke",
+  "data_not_found": "Veri bulunamadı.",
+  "go_back": "Geri Dön",
+  "audio_mode_earpiece": "Ahize Modu",
+  "audio_mode_speaker": "Hoparlör",
+  "error_audio_missing": "Ses Dosyası Bulunamadı",
+  "btn_relink_file": "Dosyayı Tekrar Yükle",
+  "label_summary": "Özet",
+  "no_summary_available": "Özet bulunamadı.",
+  "label_type": "Tür",
+  "unknown": "Bilinmiyor",
+  "label_language": "Dil",
+  "label_keypoints": "Anahtar Noktalar",
+  "label_transcript": "Canlı Transkript",
+  "speaker_default": "Konuşmacı",
+  "no_text_available": "Metin yok.",
+  "alert_warning": "Uyarı",
+  "alert_duration_mismatch": "Süre uyuşmazlığı var, yine de devam ediliyor.",
+  "alert_file_relinked": "Dosya geri yüklendi!",
+  "alert_delete_confirm": "Analizi silmek istediğine emin misin?",
+  "cancel": "İptal",
+  "delete": "Sil"
+
 }

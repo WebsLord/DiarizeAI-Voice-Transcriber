@@ -61,6 +61,30 @@
   "topic_hint": "الكلمات الرئيسية للتركيز (مثال: امتحان)",
   "topic_placeholder": "مثال: الامتحان النهائي، المشروع...",
   "original": "أصلي",
-  "Summarized": "ملخصات"
+  "Summarized": "ملخصات",
+
+  "show_highlights": "أبرز اللقطات",
+  "analysis_karaoke_title": "تحليل وكاريوكي",
+  "data_not_found": "لم يتم العثور على البيانات.",
+  "go_back": "عُد.",
+  "audio_mode_earpiece": "وضع سماعة الأذن",
+  "audio_mode_speaker": "المتحدث",
+  "error_audio_missing": "لم يتم العثور على ملف الصوت",
+  "btn_relink_file": "ملف إعادة التحميل",
+  "label_summary": "ملخص",
+  "no_summary_available": "لم يتم العثور على ملخص.",
+  "label_type": "يكتب",
+  "unknown": "مجهول",
+  "label_language": "لغة",
+  "label_keypoints": "النقاط الرئيسية",
+  "label_transcript": "نص البث المباشر",
+  "speaker_default": "المتحدث",
+  "no_text_available": "لا يوجد نص متاح.",
+  "alert_warning": "تحذير",
+  "alert_duration_mismatch": "تباين في التوقيت، لكن العملية لا تزال مستمرة.",
+  "alert_file_relinked": "تم استعادة الملف!",
+  "alert_delete_confirm": "هل أنت متأكد من رغبتك في حذف التحليل؟",
+  "cancel": "يلغي",
+  "delete": "يمسح"
   
 }

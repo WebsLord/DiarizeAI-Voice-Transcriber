@@ -61,5 +61,31 @@
   "topic_hint": "फोकस कीवर्ड (उदा: परीक्षा)",
   "topic_placeholder": "उदा: अंतिम परीक्षा, परियोजना...",
   "original": "मूल",
-  "Summarized": "सारांश"
+  "Summarized": "सारांश",
+  
+  
+  "hide_highlights": "हाइलाइट्स छिपाएँ",
+  "show_highlights": "हाइलाइट्स दिखाएँ",
+  "analysis_karaoke_title": "एनालिसिस और कराओके",
+  "data_not_found": "डेटा नहीं मिला.",
+  "go_back": "वापस जाएँ",
+  "audio_mode_earpiece": "इयरपीस मोड",
+  "audio_mode_speaker": "स्पीकर",
+  "error_audio_missing": "ऑडियो फ़ाइल नहीं मिली",
+  "btn_relink_file": "फ़ाइल रीलोड करें",
+  "label_summary": "समरी",
+  "no_summary_available": "समरी नहीं मिली.",
+  "label_type": "टाइप",
+  "unknown": "अननोन",
+  "label_language": "लैंग्वेज",
+  "label_keypoints": "कीपॉइंट्स",
+  "label_transcript": "लाइव ट्रांसक्रिप्ट",
+  "speaker_default": "स्पीकर",
+  "no_text_available": "कोई टेक्स्ट उपलब्ध नहीं है।",
+  "alert_warning": "चेतावनी",
+  "alert_duration_mismatch": "टाइम मैच नहीं हो रहा है, लेकिन अभी भी जारी है।",
+  "alert_file_relinked": "फ़ाइल रिस्टोर हो गई!",
+  "alert_delete_confirm": "क्या आप सच में एनालिसिस डिलीट करना चाहते हैं?",
+  "cancel": "कैंसल करें",
+  "delete": "डिलीट करें"
 }

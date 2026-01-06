@@ -61,6 +61,31 @@
   "topic_hint": "Keywords to focus on (e.g. Exam, Deadline)",
   "topic_placeholder": "e.g. Final Exam, Project...",
   "original": "Original",
-  "Summarized": "Summarized"
+  "Summarized": "Summarized",
+  "hide_highlights": "Hide Highlights",
 
+
+  "show_highlights": "Show Highlights",
+  "analysis_karaoke_title": "Analysis & Karaoke",
+  "data_not_found": "Data not found.",
+  "go_back": "Go Back",
+  "audio_mode_earpiece": "Earpiece Mode",
+  "audio_mode_speaker": "Speaker",
+  "error_audio_missing": "Audio File Not Found",
+  "btn_relink_file": "Reload File",
+  "label_summary": "Summary",
+  "no_summary_available": "Summary not found.",
+  "label_type": "Type",
+  "unknown": "Unknown",
+  "label_language": "Language",
+  "label_keypoints": "Keypoints",
+  "label_transcript": "Live Transcript",
+  "speaker_default": "Speaker",
+  "no_text_available": "No text available.",
+  "alert_warning": "Warning",
+  "alert_duration_mismatch": "Time mismatch, but still continuing.",
+  "alert_file_relinked": "File restored!",
+  "alert_delete_confirm": "Are you sure you want to delete the analysis?",
+  "cancel": "Cancel",
+  "delete": "Delete"
 }

@@ -61,5 +61,33 @@
   "topic_hint": "Schlüsselwörter (z.B. Prüfung, Frist)",
   "topic_placeholder": "z.B. Abschlussprüfung, Projekt...",
   "original": "Original",
-  "Summarized": "Zusammenfassungen"
+  "Summarized": "Zusammenfassungen",
+
+
+  "hide_highlights": "Highlights ausblenden",
+  "show_highlights": "Highlights anzeigen",
+  "analysis_karaoke_title": "Analyse & Karaoke",
+  "data_not_found": "Daten nicht gefunden.",
+  "go_back": "Zurück",
+  "audio_mode_earpiece": "Ohrhörermodus",
+  "audio_mode_speaker": "Lautsprecher",
+  "error_audio_missing": "Audiodatei nicht gefunden",
+  "btn_relink_file": "Datei neu laden",
+  "label_summary": "Zusammenfassung",
+  "no_summary_available": "Zusammenfassung nicht gefunden.",
+  "label_type": "Typ",
+  "unknown": "Unbekannt",
+  "label_language": "Sprache",
+  "label_keypoints": "Keypoints",
+  "label_transcript": "Live-Transkript",
+  "speaker_default": "Lautsprecher",
+  "no_text_available": "Kein Text",
+  "alert_warning": "Warnung",
+  "alert_duration_mismatch": "Zeitabweichung, wird aber fortgesetzt.",
+  "alert_file_relinked": "Datei wiederhergestellt!",
+  "alert_delete_confirm": "Möchten Sie die Analyse wirklich löschen?",
+  "cancel": "Abbrechen",
+  "delete": "Löschen"
+
+  
 }

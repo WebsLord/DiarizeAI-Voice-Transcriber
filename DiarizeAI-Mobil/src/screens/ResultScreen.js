@@ -1,13 +1,14 @@
 // src/screens/ResultScreen.js
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView, Alert, Dimensions, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView, Alert, Dimensions, LayoutAnimation, Platform, UIManager, BackHandler, Modal, StatusBar } from 'react-native';
 import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
-import { Audio } from 'expo-av';
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av'; 
 import Slider from '@react-native-community/slider';
 import { useTranslation } from 'react-i18next'; 
+import { Proximity } from 'expo-sensors'; 
 
 import { deleteAnalysis } from '../utils/resultStorage';
 
@@ -34,23 +35,26 @@ export default function ResultScreen({ route, navigation }) {
 
   // --- UI STATES ---
   const [showHighlights, setShowHighlights] = useState(true);
+  
+  // --- AUDIO MODE STATE (Speaker vs Earpiece) ---
+  const [isEarpieceMode, setIsEarpieceMode] = useState(false);
+  
+  // --- PROXIMITY STATE (Android Only) ---
+  const [isNearEar, setIsNearEar] = useState(false);
 
   // 1. SECURITY CHECK
   if (!data) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.text}>Veri bulunamadı.</Text>
+        <Text style={styles.text}>{t('data_not_found')}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.button}>
-          <Text style={styles.buttonText}>Geri Dön</Text>
+          <Text style={styles.buttonText}>{t('go_back')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
   // --- 2. DATA PREPARATION ---
-  
-  // Check if keywords exist to enable/disable toggle
-  // Geçişi etkinleştirmek/devre dışı bırakmak için anahtar kelimelerin olup olmadığını kontrol et
   const hasKeywords = useMemo(() => {
       const k = (data.usedSettings && data.usedSettings.keywords) || data.input_keywords || "";
       return k && k.trim().length > 0;
@@ -98,23 +102,18 @@ export default function ResultScreen({ route, navigation }) {
 
   // --- TOGGLE HANDLER ---
   const toggleHighlights = () => {
-      if (!hasKeywords) return; // Guard clause
+      if (!hasKeywords) return; 
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowHighlights(!showHighlights);
   };
 
-  // --- MARKDOWN PARSER FOR HIGHLIGHTING ---
+  // --- MARKDOWN PARSER ---
   const highlightText = (text, baseStyle) => {
       if (!text) return null;
-
-      // If no keywords were provided, just return plain text (strip asterisks if any exist by mistake)
-      // Anahtar kelime sağlanmadıysa, düz metin döndür (yanlışlıkla varsa yıldız işaretlerini kaldır)
       if (!hasKeywords) {
           return <Text style={baseStyle}>{text.replace(/\*\*/g, '')}</Text>;
       }
-
       const parts = text.split(/\*\*(.*?)\*\*/g);
-
       return (
           <Text style={baseStyle}>
               {parts.map((part, index) => {
@@ -124,9 +123,7 @@ export default function ResultScreen({ route, navigation }) {
                               backgroundColor: 'rgba(255, 193, 7, 0.25)', 
                               color: '#FFC107', 
                               fontWeight: 'bold',
-                          }}>
-                              {part}
-                          </Text>
+                          }}>{part}</Text>
                       ) : (
                           <Text key={index}>{part}</Text>
                       );
@@ -138,16 +135,86 @@ export default function ResultScreen({ route, navigation }) {
       );
   };
 
-  // --- 3. LIFECYCLE ---
+  // --- 3. LIFECYCLE & SENSORS ---
   useEffect(() => {
       checkLocalFile();
+      setAudioMode(false); // Default to speaker
+      
+      let proximitySubscription;
+      
+      // --- ANDROID AUTOMATION ---
+      if (Platform.OS === 'android') {
+          const startProximity = async () => {
+              try {
+                Proximity.setUpdateInterval(500);
+                proximitySubscription = Proximity.addListener((result) => {
+                    const isNear = result.proximity; 
+                    setIsNearEar(!!isNear);
+                    
+                    if (isNear) {
+                        setAudioMode(true); // Ear
+                    } else {
+                        setAudioMode(false); // Speaker
+                        pauseIfPlaying(); 
+                    }
+                });
+              } catch (err) {
+                  console.log("Sensor error:", err);
+              }
+          };
+          startProximity();
+      }
+
       return () => {
         if (soundRef.current) {
           soundRef.current.stopAsync();
           soundRef.current.unloadAsync();
         }
+        if (proximitySubscription) proximitySubscription.remove();
       };
-  }, []);
+  }, []); 
+
+  // --- 4. BACK BUTTON LOCK (ANDROID) ---
+  useEffect(() => {
+      const backAction = () => {
+          return isNearEar; 
+      };
+      const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
+      return () => backHandler.remove();
+  }, [isNearEar]);
+
+  // --- AUDIO ROUTING HELPER ---
+  const setAudioMode = async (earpieceOn) => {
+      setIsEarpieceMode(earpieceOn);
+      try {
+          await Audio.setAudioModeAsync({
+              allowsRecordingIOS: earpieceOn, 
+              playsInSilentModeIOS: true,
+              staysActiveInBackground: true,
+              playThroughEarpieceAndroid: earpieceOn, 
+              interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+              interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+          });
+      } catch (e) {
+          console.log("Audio Switch Error:", e);
+      }
+  };
+
+  const pauseIfPlaying = async () => {
+      if (soundRef.current) {
+          const status = await soundRef.current.getStatusAsync();
+          if (status.isPlaying) {
+              await soundRef.current.pauseAsync();
+              setIsPlaying(false);
+          }
+      }
+  };
+
+  // --- MANUAL TOGGLE (For iOS mainly) ---
+  const toggleSpeaker = () => {
+      const newMode = !isEarpieceMode;
+      setAudioMode(newMode);
+  };
 
   // --- FILE OPERATIONS ---
   const checkLocalFile = async () => {
@@ -175,7 +242,10 @@ export default function ResultScreen({ route, navigation }) {
   const loadSound = async (uri) => {
     try {
       if (soundRef.current) await soundRef.current.unloadAsync();
-      const { sound: newSound, status } = await Audio.Sound.createAsync({ uri }, { shouldPlay: false });
+      const { sound: newSound, status } = await Audio.Sound.createAsync(
+          { uri }, 
+          { shouldPlay: false }
+      );
       soundRef.current = newSound; 
       setDuration(status.durationMillis);
       await newSound.setProgressUpdateIntervalAsync(50);
@@ -226,10 +296,10 @@ export default function ResultScreen({ route, navigation }) {
           const lastSegment = processedSegments.length > 0 ? processedSegments[processedSegments.length - 1] : null;
           const expectedDuration = lastSegment ? lastSegment.end : 0;
           if (expectedDuration > 0 && Math.abs(pickedDuration - expectedDuration) > 10) {
-              Alert.alert("Warning", "Duration mismatch, proceeding anyway.");
+              Alert.alert(t('alert_warning'), t('alert_duration_mismatch'));
           }
           await performRelink(pickedFile);
-      } catch (error) { Alert.alert("Error", error.message); }
+      } catch (error) { Alert.alert(t('alert_error'), error.message); }
   };
 
   const performRelink = async (pickedFile) => {
@@ -239,15 +309,15 @@ export default function ResultScreen({ route, navigation }) {
           if (!fileName) return;
           const targetPath = FileSystem.documentDirectory + fileName;
           await FileSystem.copyAsync({ from: pickedFile.uri, to: targetPath });
-          Alert.alert("Success", "File relinked!");
+          Alert.alert(t('alert_success'), t('alert_file_relinked'));
           checkLocalFile(); 
-      } catch (e) { Alert.alert("Error", e.message); }
+      } catch (e) { Alert.alert(t('alert_error'), e.message); }
   };
 
   const handleDeleteAnalysis = async () => {
-      Alert.alert("Delete", "Are you sure?", [
-          { text: "Cancel", style: "cancel" },
-          { text: "Delete", style: "destructive", onPress: async () => {
+      Alert.alert(t('alert_delete_title'), t('alert_delete_confirm'), [
+          { text: t('cancel'), style: "cancel" },
+          { text: t('delete'), style: "destructive", onPress: async () => {
               if (data.localId) await deleteAnalysis(data.localId);
               navigation.goBack();
           }}
@@ -262,9 +332,8 @@ export default function ResultScreen({ route, navigation }) {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
-  // Helper for button color
   const getToggleColor = () => {
-      if (!hasKeywords) return "#555"; // Disabled color
+      if (!hasKeywords) return "#555"; 
       return showHighlights ? "#FFC107" : "#888";
   };
 
@@ -275,12 +344,12 @@ export default function ResultScreen({ route, navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.title}>Analiz & Karaoke</Text>
+          <Text style={styles.title}>{t('analysis_karaoke_title')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
-        {/* PLAYER */}
+        {/* PLAYER CARD */}
         {!isFileMissing && localUri ? (
             <View style={styles.playerCard}>
                 <View style={styles.playerTopRow}>
@@ -303,14 +372,28 @@ export default function ResultScreen({ route, navigation }) {
                     
                     <Text style={styles.timeText}>{formatTime(duration)}</Text>
                 </View>
+
+                {/* --- AUDIO OUTPUT TOGGLE --- */}
+                <View style={{flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10}}>
+                    <TouchableOpacity onPress={toggleSpeaker} style={styles.audioModeBtn}>
+                        <Ionicons 
+                            name={isEarpieceMode ? "ear" : "volume-high"} 
+                            size={18} 
+                            color="#CCC" 
+                        />
+                        <Text style={styles.audioModeText}>
+                            {isEarpieceMode ? t('audio_mode_earpiece') : t('audio_mode_speaker')}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         ) : (
             <View style={styles.errorCard}>
                 <Ionicons name="alert-circle" size={40} color="#FF5252" />
-                <Text style={styles.errorTitle}>Ses Dosyası Bulunamadı</Text>
+                <Text style={styles.errorTitle}>{t('error_audio_missing')}</Text>
                 <View style={styles.errorActions}>
                     <TouchableOpacity style={styles.relinkButton} onPress={handleRelinkFile}>
-                        <Text style={styles.btnText}>Dosyayı Tekrar Yükle</Text>
+                        <Text style={styles.btnText}>{t('btn_relink_file')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAnalysis}>
                         <Ionicons name="trash" size={18} color="white" />
@@ -324,16 +407,15 @@ export default function ResultScreen({ route, navigation }) {
           <View style={[styles.cardHeader, { justifyContent: 'space-between' }]}> 
             <View style={{flexDirection:'row', alignItems:'center'}}>
                 <Ionicons name="document-text-outline" size={24} color="#4A90E2" />
-                <Text style={styles.cardTitle}>Özet</Text>
+                <Text style={styles.cardTitle}>{t('label_summary')}</Text>
             </View>
             
-            {/* TOGGLE BUTTON */}
             <TouchableOpacity 
                 onPress={toggleHighlights} 
-                disabled={!hasKeywords} // Disable if no keywords
+                disabled={!hasKeywords}
                 style={[
                     styles.toggleButton,
-                    !hasKeywords && { opacity: 0.4, borderColor: '#333' } // Visual disable
+                    !hasKeywords && { opacity: 0.4, borderColor: '#333' }
                 ]}
             >
                 <Ionicons 
@@ -342,24 +424,23 @@ export default function ResultScreen({ route, navigation }) {
                     color={getToggleColor()} 
                 />
                 <Text style={[styles.toggleText, { color: getToggleColor() }]}>
-                    {/* Translate toggle text */}
-                    {showHighlights ? (t('hide_highlights') || "Gizle") : (t('show_highlights') || "Göster")}
+                    {showHighlights ? t('hide_highlights') : t('show_highlights')}
                 </Text>
             </TouchableOpacity>
           </View>
           
-          {highlightText(data.summary || "Özet bulunamadı.", styles.cardText)}
+          {highlightText(data.summary || t('no_summary_available'), styles.cardText)}
         </View>
 
         {/* INFO */}
         <View style={styles.row}>
           <View style={[styles.card, { flex: 1, marginRight: 10 }]}>
-            <Text style={styles.label}>Tür</Text>
-            <Text style={styles.value}>{data.conversation_type || "Bilinmiyor"}</Text>
+            <Text style={styles.label}>{t('label_type')}</Text>
+            <Text style={styles.value}>{data.conversation_type || t('unknown')}</Text>
           </View>
           <View style={[styles.card, { flex: 1, marginLeft: 10 }]}>
-            <Text style={styles.label}>Dil</Text>
-            <Text style={styles.value}>{data.language || "Bilinmiyor"}</Text>
+            <Text style={styles.label}>{t('label_language')}</Text>
+            <Text style={styles.value}>{data.language || t('unknown')}</Text>
           </View>
         </View>
 
@@ -367,7 +448,7 @@ export default function ResultScreen({ route, navigation }) {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="list-outline" size={24} color="#F5A623" />
-            <Text style={styles.cardTitle}>Anahtar Noktalar</Text>
+            <Text style={styles.cardTitle}>{t('label_keypoints')}</Text>
           </View>
           {keypoints.map((point, index) => (
               <View key={index} style={styles.bulletPoint}>
@@ -381,7 +462,7 @@ export default function ResultScreen({ route, navigation }) {
         <View style={styles.card}>
             <View style={styles.cardHeader}>
                 <Ionicons name="chatbubbles-outline" size={24} color="#50E3C2" />
-                <Text style={styles.cardTitle}>Canlı Transkript</Text>
+                <Text style={styles.cardTitle}>{t('label_transcript')}</Text>
             </View>
 
             {processedSegments.length > 0 ? (
@@ -405,7 +486,7 @@ export default function ResultScreen({ route, navigation }) {
 
                             <View style={{flexDirection:'row', justifyContent:'space-between', marginBottom: 5}}>
                                 <Text style={[styles.speakerName, isActive && { color: '#000' }]}>
-                                    {seg.speaker || "Konuşmacı"}:
+                                    {seg.speaker || t('speaker_default')}:
                                 </Text>
                                 <Text style={[styles.timeStamp, isActive && { color: '#333' }]}>
                                     {formatTime(seg.start * 1000)}
@@ -420,11 +501,27 @@ export default function ResultScreen({ route, navigation }) {
                     );
                 })
             ) : (
-                <Text style={styles.transcriptText}>{data.clean_transcript || "Metin yok."}</Text>
+                <Text style={styles.transcriptText}>{data.clean_transcript || t('no_text_available')}</Text>
             )}
         </View>
 
       </ScrollView>
+
+      {/* --- PROXIMITY MODAL --- */}
+      {Platform.OS === 'android' && (
+          <Modal 
+            visible={isNearEar} 
+            transparent={false} 
+            animationType="fade"
+            statusBarTranslucent={true} 
+          >
+              <StatusBar hidden={true} />
+              <View style={styles.blackOverlay}>
+                  <Ionicons name="ear" size={64} color="#333" />
+              </View>
+          </Modal>
+      )}
+
     </SafeAreaView>
   );
 }
@@ -456,6 +553,13 @@ const styles = StyleSheet.create({
       alignItems: 'center', justifyContent: 'center', marginRight: 10
   },
   timeText: { color: '#CCC', fontSize: 12, fontVariant: ['tabular-nums'], width: 40, textAlign: 'center' },
+  
+  // AUDIO MODE BUTTON
+  audioModeBtn: {
+      flexDirection: 'row', alignItems: 'center', backgroundColor: '#333', 
+      paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15
+  },
+  audioModeText: { color: '#CCC', fontSize: 12, marginLeft: 6 },
 
   // CARDS
   card: { backgroundColor: '#1E1E1E', borderRadius: 12, padding: 15, marginBottom: 15 },
@@ -518,5 +622,13 @@ const styles = StyleSheet.create({
   errorActions: { flexDirection: 'row', gap: 10 },
   relinkButton: { backgroundColor: '#4A90E2', padding: 10, borderRadius: 8 },
   deleteButton: { backgroundColor: '#FF5252', padding: 10, borderRadius: 8 },
-  btnText: { color: 'white', fontWeight: 'bold' }
+  btnText: { color: 'white', fontWeight: 'bold' },
+
+  // BLACK OVERLAY STYLE
+  blackOverlay: {
+      flex: 1,
+      backgroundColor: '#000',
+      justifyContent: 'center',
+      alignItems: 'center',
+  }
 });
