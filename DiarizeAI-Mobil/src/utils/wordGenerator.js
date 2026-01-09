@@ -1,127 +1,97 @@
 // src/utils/wordGenerator.js
 
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ShadingType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType } from 'docx';
 
-/**
- * Generates a Word (.docx) document base64 string.
- * Word (.docx) belgesi için base64 metni oluşturur.
- */
 export const generateWord = async (data, t, theme) => {
-    // --- THEME SETTINGS ---
     const isDark = theme === 'dark';
     
-    // HEX Renk Kodları (Başında # olmadan)
-    // Koyu tema: Beyaz Yazı, Siyah Zemin
-    // Açık tema: Siyah Yazı, Beyaz Zemin
+    // --- RENK AYARLARI ---
     const textColor = isDark ? "FFFFFF" : "000000"; 
-    const pageBgColor = isDark ? "000000" : "FFFFFF"; 
-    const accentColor = "4A90E2"; // Başlıklar için Mavi
+    const accentColor = "4A90E2"; 
 
-    // PARAGRAF ARKASI DOLGUSU (SHADING)
-    // Mobil cihazlar sayfa rengini (Page Color) görmezden geldiği için,
-    // Koyu modda her paragrafın arkasını manuel olarak siyaha boyuyoruz.
-    // Bu işlem yazının okunabilirliğini garanti eder.
-    const shadingConfig = isDark ? {
-        fill: "000000",        // Dolgu Rengi (Siyah)
-        val: ShadingType.CLEAR, // Desen Tipi (Düz Renk)
-        color: "auto"          // Desen Rengi
+    // Tablo Hücresi Dolgusu (Siyah Zemin)
+    const cellShading = isDark ? {
+        fill: "000000",
+        val: ShadingType.CLEAR,
+        color: "auto"
     } : undefined;
 
     // --- YARDIMCI FONKSİYONLAR ---
 
-    // 1. Şekilli Yazı Parçası (TextRun)
     const createText = (text, options = {}) => {
         return new TextRun({
             text: text,
             color: textColor,
             font: "Helvetica",
-            size: 24, // Word'de 24 = 12pt
+            size: 24, 
             ...options
         });
     };
 
-    // 2. Paragraf Oluşturucu
-    // ÖNEMLİ: 'text' parametresi kullanılmıyor, sadece 'children' kullanılıyor.
-    // Bu sayede "ÖzetÖzet" gibi çift yazma hatası engelleniyor.
     const createPara = (children, alignment = AlignmentType.LEFT, spacing = { after: 120 }) => {
         return new Paragraph({
             alignment: alignment,
             spacing: spacing,
-            shading: shadingConfig, // Arka plan şeridi (Siyah)
             children: children
         });
     };
 
-    // 3. Başlık Oluşturucu (Heading)
     const createHeading = (text) => {
         return new Paragraph({
             heading: HeadingLevel.HEADING_2,
             alignment: AlignmentType.LEFT,
             spacing: { before: 400, after: 200 },
-            shading: shadingConfig, // Arka plan şeridi (Siyah)
             children: [
                 new TextRun({
                     text: text,
                     bold: true,
                     color: accentColor,
-                    size: 32, // 16pt
+                    size: 32, 
                 }),
             ],
         });
     };
 
-    // 4. Madde İşareti Oluşturucu (Bullet)
     const createBullet = (text) => {
         return new Paragraph({
             bullet: { level: 0 },
-            shading: shadingConfig, // Arka plan şeridi (Siyah)
             children: [createText(text)],
         });
     };
 
-    // --- İÇERİK OLUŞTURMA ---
-    const sections = [];
+    // --- İÇERİK BLOKLARI ---
+    const contentBlocks = [];
 
-    // --- 1. Başlık (Title) ---
-    sections.push(
+    // Başlık
+    contentBlocks.push(
         new Paragraph({
             heading: HeadingLevel.TITLE,
             alignment: AlignmentType.CENTER,
             spacing: { after: 300 },
-            shading: shadingConfig,
             children: [
                 new TextRun({
                     text: data.originalName || "Audio Analysis",
                     bold: true,
                     color: accentColor,
-                    size: 48, // 24pt
+                    size: 48, 
                 }),
             ],
         })
     );
 
-    // --- 2. Bilgiler (Info) ---
-    sections.push(
-        createPara([
-            createText(`${t('label_language')}: ${data.language || "-"}`, { bold: true })
-        ]),
-        createPara([
-            createText(`${t('label_type')}: ${data.conversation_type || "-"}`, { bold: true })
-        ])
-    );
+    // Bilgiler
+    contentBlocks.push(createPara([createText(`${t('label_language')}: ${data.language || "-"}`, { bold: true })]));
+    contentBlocks.push(createPara([createText(`${t('label_type')}: ${data.conversation_type || "-"}`, { bold: true })]));
+    
+    contentBlocks.push(createPara([], AlignmentType.LEFT, { after: 200 })); // Boşluk
 
-    // Boşluk (Spacer) - Koyu modda boşluğun da rengi olmalı ki beyaz çizgi oluşmasın
-    sections.push(new Paragraph({ text: "", spacing: { after: 200 }, shading: shadingConfig }));
+    // Özet
+    contentBlocks.push(createHeading(t('label_summary')));
+    contentBlocks.push(createPara([createText(data.summary || "")]));
 
-    // --- 3. Özet (Summary) ---
-    sections.push(createHeading(t('label_summary')));
-    sections.push(
-        createPara([createText(data.summary || "")])
-    );
-
-    // --- 4. Anahtar Noktalar (Keypoints) ---
+    // Anahtar Noktalar
     if (data.keypoints_json || data.keypoints) {
-        sections.push(createHeading(t('label_keypoints')));
+        contentBlocks.push(createHeading(t('label_keypoints')));
         let points = [];
         try {
             let src = data.keypoints_json || data.keypoints;
@@ -130,14 +100,14 @@ export const generateWord = async (data, t, theme) => {
 
         if (Array.isArray(points)) {
             points.forEach(point => {
-                sections.push(createBullet(point));
+                contentBlocks.push(createBullet(point));
             });
         }
     }
 
-    // --- 5. Transkript (Transcript) ---
+    // Transkript
     if (data.segments || data.segments_json) {
-        sections.push(createHeading(t('label_transcript')));
+        contentBlocks.push(createHeading(t('label_transcript')));
         
         let segments = [];
         let source = data.segments || data.segments_json;
@@ -150,64 +120,118 @@ export const generateWord = async (data, t, theme) => {
             segments.forEach(seg => {
                 const timeStr = ` [${formatTime(seg.start || seg.start_time)}]`;
                 
-                // A) Konuşmacı Satırı
-                sections.push(
+                contentBlocks.push(
                     new Paragraph({
-                        shading: shadingConfig,
                         spacing: { before: 200 },
                         children: [
                             new TextRun({
                                 text: (seg.speaker || "Speaker") + timeStr,
                                 bold: true,
                                 color: accentColor,
-                                size: 20, // 10pt
+                                size: 20, 
                             }),
                         ],
                     })
                 );
-                
-                // B) Konuşma Metni Satırı
-                sections.push(
-                    createPara([createText(seg.text)])
-                );
+                contentBlocks.push(createPara([createText(seg.text)]));
             });
         }
     }
 
-    // --- 6. Alt Bilgi (Footer) ---
-    sections.push(
+    // Footer
+    contentBlocks.push(
         new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: 600 },
-            shading: shadingConfig,
             children: [
                 new TextRun({
                     text: `Generated by DiarizeAI - ${new Date().toLocaleString()}`,
                     italics: true,
-                    color: "888888", // Gri renk her iki temada da okunur
-                    size: 16, // 8pt
+                    color: "888888",
+                    size: 16,
                 }),
             ],
         })
     );
 
-    // --- BELGE OLUŞTURMA (Document Generation) ---
+    // --- TABLO & SAYFA DÜZENİ ---
+    let finalChildren = [];
+    
+    // Sayfa Kenar Boşlukları (Margins)
+    // Koyu modda kenar boşluğunu 0 yapıyoruz ki beyaz çerçeve kalmasın.
+    // Açık modda standart boşluk bırakıyoruz.
+    const pageMargins = isDark ? {
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0
+    } : {
+        top: 1000,
+        right: 1000,
+        bottom: 1000,
+        left: 1000
+    };
+
+    if (isDark) {
+        // KOYU MOD:
+        // Sayfa kenarları 0 olduğu için, metinlerin kenara yapışmasını engellemek adına
+        // tablonun İÇİNE margin (padding) veriyoruz. (1440 DXA = 1 inç civarı)
+        const table = new Table({
+            width: {
+                size: 100, 
+                type: WidthType.PERCENTAGE, 
+            },
+            // A4 genişliği ~11906 DXA. Kenar boşluğu 0 olduğu için tabloyu tam genişliğe zorluyoruz.
+            columnWidths: [11906], 
+            rows: [
+                new TableRow({
+                    children: [
+                        new TableCell({
+                            children: contentBlocks,
+                            shading: cellShading,    // SİYAH ZEMİN
+                            borders: {               // KENARLIK YOK
+                                top: { style: BorderStyle.NONE, size: 0, color: "000000" },
+                                bottom: { style: BorderStyle.NONE, size: 0, color: "000000" },
+                                left: { style: BorderStyle.NONE, size: 0, color: "000000" },
+                                right: { style: BorderStyle.NONE, size: 0, color: "000000" },
+                            },
+                            // İÇ BOŞLUK (PADDING) - Beyaz kenarlık yerine siyah iç boşluk
+                            margins: {
+                                top: 1440,    // ~2.5 cm üstten boşluk
+                                bottom: 1440, // ~2.5 cm alttan boşluk
+                                left: 1000,   // Sol boşluk
+                                right: 1000   // Sağ boşluk
+                            }
+                        }),
+                    ],
+                }),
+            ],
+        });
+        finalChildren = [table];
+    } else {
+        // AÇIK MOD
+        finalChildren = contentBlocks;
+    }
+
+    // --- BELGE OLUŞTURMA ---
     const doc = new Document({
         background: {
-            color: pageBgColor, // PC Sürümü için Sayfa Rengi (Tam Siyah)
+            color: isDark ? "000000" : "FFFFFF",
         },
         sections: [{
-            properties: {},
-            children: sections,
+            properties: {
+                page: {
+                    margin: pageMargins, // Dinamik kenar boşluğu (0 veya normal)
+                },
+            },
+            children: finalChildren,
         }],
     });
 
-    // Base64 Çıktısı
     const buffer = await Packer.toBase64String(doc);
     return buffer;
 };
 
-// Yardımcı: Süre Formatlayıcı (00:00)
 const formatTime = (seconds) => {
     if (!seconds) return "00:00";
     const totalSeconds = Math.floor(seconds);
