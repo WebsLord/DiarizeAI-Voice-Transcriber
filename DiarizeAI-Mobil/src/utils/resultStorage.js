@@ -10,25 +10,17 @@ const STORAGE_KEY = '@analysis_results';
  */
 export const saveAnalysisResult = async (result) => {
     try {
-        // 1. Retrieve existing data
-        // 1. Mevcut veriyi çek
         const existingData = await AsyncStorage.getItem(STORAGE_KEY);
         let results = existingData ? JSON.parse(existingData) : [];
 
-        // 2. Prepare the new data (Add a unique ID and date)
-        // 2. Yeni veriyi hazırla (Benzersiz ID ve tarih ekle)
         const newEntry = {
             ...result,
             savedAt: new Date().toISOString(),
-            localId: Date.now().toString(), // Unique ID for deletion / Silme işlemi için benzersiz ID
+            localId: Date.now().toString(), 
         };
         
-        // 3. Add to the beginning of the list
-        // 3. Listenin başına ekle
         results.unshift(newEntry);
 
-        // 4. Save
-        // 4. Kaydet
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(results));
         console.log("✅ Analysis saved:", newEntry.localId);
         return newEntry;
@@ -63,13 +55,36 @@ export const deleteAnalysis = async (localId) => {
         if (!existingData) return;
 
         let results = JSON.parse(existingData);
-        // Filter out the item with matching ID
-        // ID'si eşleşmeyeni tut, eşleşeni at
         results = results.filter(item => item.localId !== localId);
 
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(results));
     } catch (error) {
         console.error("Delete error:", error);
+    }
+};
+
+/**
+ * Update a specific analysis. (NEW)
+ * Belirli bir analizi güncelle. (YENİ)
+ */
+export const updateAnalysis = async (localId, updatedFields) => {
+    try {
+        const existingData = await AsyncStorage.getItem(STORAGE_KEY);
+        if (!existingData) return;
+
+        let results = JSON.parse(existingData);
+        const index = results.findIndex(item => item.localId === localId);
+
+        if (index !== -1) {
+            // Mevcut veri ile yeni alanları birleştir
+            results[index] = { ...results[index], ...updatedFields };
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(results));
+            console.log("✅ Analysis updated:", localId);
+            return results[index];
+        }
+    } catch (error) {
+        console.error("Update error:", error);
+        throw error;
     }
 };
 
@@ -83,8 +98,6 @@ export const deleteMultipleAnalyses = async (idsToDelete) => {
         if (!existingData) return;
 
         let results = JSON.parse(existingData);
-        // Filter out items that are in the delete list
-        // Silinecekler listesinde olan öğeleri filtrele
         results = results.filter(item => !idsToDelete.includes(item.localId));
 
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(results));
