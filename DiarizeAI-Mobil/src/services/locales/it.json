@@ -114,5 +114,12 @@
 
   "token_could_not_be_stored": "Impossibile salvare il token:",
   "token_could_not_be_read": "Impossibile leggere il token:",
-  "the_token_could_not_be_deleted.": "Impossibile eliminare il token."
+  "the_token_could_not_be_deleted.": "Impossibile eliminare il token.",
+
+  "rename_speaker_title": "Rinomina oratore",
+  "rename_speaker_subtitle": "Nome attuale",
+  "placeholder_new_name": "Inserisci nuovo nome...",
+  "btn_save": "Salva",
+  "error_empty_name": "Il nome non può essere vuoto.",
+  "error_save_failed": "Salvataggio fallito."
 }

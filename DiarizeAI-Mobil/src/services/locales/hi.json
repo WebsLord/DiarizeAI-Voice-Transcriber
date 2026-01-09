@@ -115,5 +115,12 @@
 
   "token_could_not_be_stored": "टोकन सहेजा नहीं जा सका:",
   "token_could_not_be_read": "टोकन पढ़ा नहीं जा सका:",
-  "the_token_could_not_be_deleted.": "टोकन हटाया नहीं जा सका।"
+  "the_token_could_not_be_deleted.": "टोकन हटाया नहीं जा सका।",
+
+  "rename_speaker_title": "वक्ता का नाम बदलें",
+  "rename_speaker_subtitle": "वर्तमान नाम",
+  "placeholder_new_name": "नया नाम दर्ज करें...",
+  "btn_save": "सहेजें",
+  "error_empty_name": "नाम खाली नहीं हो सकता।",
+  "error_save_failed": "सहेजना विफल रहा।"
 }

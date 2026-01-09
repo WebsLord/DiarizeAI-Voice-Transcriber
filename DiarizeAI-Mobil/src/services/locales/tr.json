@@ -112,12 +112,17 @@
   "no_results_found": "Sonuç bulunamadı.",
   "no_saved_analysis": "Henüz kayıtlı analiz yok.",
   "label_title": "BAŞLIK",
-  
+
   "token_could_not_be_stored": "Token kaydedilemedi:",
   "token_could_not_be_read": "Token okunamadı:",
-  "the_token_could_not_be_deleted.": "Token silinemedi."
+  "the_token_could_not_be_deleted.": "Token silinemedi.",
 
-
+  "rename_speaker_title": "Konuşmacı Adını Değiştir",
+  "rename_speaker_subtitle": "Şu anki isim",
+  "placeholder_new_name": "Yeni isim girin...",
+  "btn_save": "Kaydet",
+  "error_empty_name": "İsim boş olamaz.",
+  "error_save_failed": "Kayıt edilemedi."
   
  
 

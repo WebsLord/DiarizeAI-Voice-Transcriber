@@ -114,5 +114,12 @@
   
   "token_could_not_be_stored": "Token yadda saxlanıla bilmədi:",
   "token_could_not_be_read": "Token oxuna bilmədi:",
-  "the_token_could_not_be_deleted.": "Token silinə bilmədi."
+  "the_token_could_not_be_deleted.": "Token silinə bilmədi.",
+
+  "rename_speaker_title": "Danışan adını dəyişdir",
+  "rename_speaker_subtitle": "Cari ad",
+  "placeholder_new_name": "Yeni ad daxil edin...",
+  "btn_save": "Yadda saxla",
+  "error_empty_name": "Ad boş ola bilməz.",
+  "error_save_failed": "Yadda saxlamaq mümkün olmadı."
 }

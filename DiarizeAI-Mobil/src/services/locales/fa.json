@@ -114,5 +114,12 @@
 
   "token_could_not_be_stored": "توکن ذخیره نشد:",
   "token_could_not_be_read": "توکن خوانده نشد:",
-  "the_token_could_not_be_deleted.": "توکن حذف نشد."
+  "the_token_could_not_be_deleted.": "توکن حذف نشد.",
+
+  "rename_speaker_title": "تغییر نام گوینده",
+  "rename_speaker_subtitle": "نام فعلی",
+  "placeholder_new_name": "نام جدید وارد کنید...",
+  "btn_save": "ذخیره",
+  "error_empty_name": "نام نمی‌تواند خالی باشد.",
+  "error_save_failed": "ذخیره نشد."
 }

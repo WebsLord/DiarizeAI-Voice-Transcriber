@@ -114,5 +114,12 @@
 
   "token_could_not_be_stored": "Token tidak dapat disimpan:",
   "token_could_not_be_read": "Token tidak dapat dibaca:",
-  "the_token_could_not_be_deleted.": "Token tidak dapat dihapus."
+  "the_token_could_not_be_deleted.": "Token tidak dapat dihapus.",
+
+  "rename_speaker_title": "Ubah Nama Pembicara",
+  "rename_speaker_subtitle": "Nama saat ini",
+  "placeholder_new_name": "Masukkan nama baru...",
+  "btn_save": "Simpan",
+  "error_empty_name": "Nama tidak boleh kosong.",
+  "error_save_failed": "Gagal menyimpan."
 }

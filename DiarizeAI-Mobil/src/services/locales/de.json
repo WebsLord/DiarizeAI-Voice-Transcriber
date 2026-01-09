@@ -115,7 +115,14 @@
 
   "token_could_not_be_stored": "Token konnte nicht gespeichert werden:",
   "token_could_not_be_read": "Token konnte nicht gelesen werden:",
-  "the_token_could_not_be_deleted.": "Token konnte nicht gelöscht werden."
+  "the_token_could_not_be_deleted.": "Token konnte nicht gelöscht werden.",
+
+  "rename_speaker_title": "Sprechernamen ändern",
+  "rename_speaker_subtitle": "Aktueller Name",
+  "placeholder_new_name": "Neuen Namen eingeben...",
+  "btn_save": "Speichern",
+  "error_empty_name": "Name darf nicht leer sein.",
+  "error_save_failed": "Speichern fehlgeschlagen."
 
   
 }

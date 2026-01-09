@@ -113,5 +113,12 @@
 
   "token_could_not_be_stored": "لم يتم تخزين الرمز:",
   "token_could_not_be_read": "تعذرت قراءة الرمز:",
-  "the_token_could_not_be_deleted.": "تعذر حذف الرمز."
+  "the_token_could_not_be_deleted.": "تعذر حذف الرمز.",
+
+  "rename_speaker_title": "تغيير اسم المتحدث",
+  "rename_speaker_subtitle": "الاسم الحالي",
+  "placeholder_new_name": "أدخل اسماً جديداً...",
+  "btn_save": "حفظ",
+  "error_empty_name": "لا يمكن أن يكون الاسم فارغاً.",
+  "error_save_failed": "فشل الحفظ."
 }

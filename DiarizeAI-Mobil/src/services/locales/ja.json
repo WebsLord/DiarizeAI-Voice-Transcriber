@@ -114,5 +114,12 @@
 
   "token_could_not_be_stored": "トークンを保存できませんでした:",
   "token_could_not_be_read": "トークンを読み込めませんでした:",
-  "the_token_could_not_be_deleted.": "トークンを削除できませんでした。"
+  "the_token_could_not_be_deleted.": "トークンを削除できませんでした。",
+
+  "rename_speaker_title": "話者名を変更",
+  "rename_speaker_subtitle": "現在の名前",
+  "placeholder_new_name": "新しい名前を入力...",
+  "btn_save": "保存",
+  "error_empty_name": "名前は空にできません。",
+  "error_save_failed": "保存に失敗しました。"
 }

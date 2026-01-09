@@ -114,5 +114,12 @@
 
   "token_could_not_be_stored": "无法保存令牌：",
   "token_could_not_be_read": "无法读取令牌：",
-  "the_token_could_not_be_deleted.": "无法删除令牌。"
+  "the_token_could_not_be_deleted.": "无法删除令牌。",
+
+  "rename_speaker_title": "重命名发言人",
+  "rename_speaker_subtitle": "当前名称",
+  "placeholder_new_name": "输入新名称...",
+  "btn_save": "保存",
+  "error_empty_name": "名称不能为空。",
+  "error_save_failed": "保存失败。"
 }

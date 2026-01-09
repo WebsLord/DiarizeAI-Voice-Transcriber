@@ -115,5 +115,12 @@
 
   "token_could_not_be_stored": "Token could not be stored:",
   "token_could_not_be_read": "Token could not be read:",
-  "the_token_could_not_be_deleted.": "Token could not be deleted."
+  "the_token_could_not_be_deleted.": "Token could not be deleted.",
+
+  "rename_speaker_title": "Rename Speaker",
+  "rename_speaker_subtitle": "Current name",
+  "placeholder_new_name": "Enter new name...",
+  "btn_save": "Save",
+  "error_empty_name": "Name cannot be empty.",
+  "error_save_failed": "Save failed."
 }

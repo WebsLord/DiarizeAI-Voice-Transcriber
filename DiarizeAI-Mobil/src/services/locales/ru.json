@@ -114,5 +114,12 @@
 
   "token_could_not_be_stored": "Не удалось сохранить токен:",
   "token_could_not_be_read": "Не удалось прочитать токен:",
-  "the_token_could_not_be_deleted.": "Не удалось удалить токен."
+  "the_token_could_not_be_deleted.": "Не удалось удалить токен.",
+
+  "rename_speaker_title": "Переименовать спикера",
+  "rename_speaker_subtitle": "Текущее имя",
+  "placeholder_new_name": "Введите новое имя...",
+  "btn_save": "Сохранить",
+  "error_empty_name": "Имя не может быть пустым.",
+  "error_save_failed": "Не удалось сохранить."
 }

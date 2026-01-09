@@ -115,6 +115,13 @@
   
   "token_could_not_be_stored": "Nie można zapisać tokena:",
   "token_could_not_be_read": "Nie można odczytać tokena:",
-  "the_token_could_not_be_deleted.": "Nie można usunąć tokena."
+  "the_token_could_not_be_deleted.": "Nie można usunąć tokena.",
+
+  "rename_speaker_title": "Zmień nazwę mówcy",
+  "rename_speaker_subtitle": "Obecna nazwa",
+  "placeholder_new_name": "Wpisz nową nazwę...",
+  "btn_save": "Zapisz",
+  "error_empty_name": "Nazwa nie może być pusta.",
+  "error_save_failed": "Zapisywanie nie powiodło się."
 
 }

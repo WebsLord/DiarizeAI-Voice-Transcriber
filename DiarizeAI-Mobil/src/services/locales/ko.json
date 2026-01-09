@@ -114,5 +114,12 @@
 
   "token_could_not_be_stored": "토큰을 저장할 수 없습니다:",
   "token_could_not_be_read": "토큰을 읽을 수 없습니다:",
-  "the_token_could_not_be_deleted.": "토큰을 삭제할 수 없습니다."
+  "the_token_could_not_be_deleted.": "토큰을 삭제할 수 없습니다.",
+
+  "rename_speaker_title": "화자 이름 변경",
+  "rename_speaker_subtitle": "현재 이름",
+  "placeholder_new_name": "새 이름 입력...",
+  "btn_save": "저장",
+  "error_empty_name": "이름은 비워둘 수 없습니다.",
+  "error_save_failed": "저장 실패."
 }

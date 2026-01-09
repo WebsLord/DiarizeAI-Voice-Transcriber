@@ -114,5 +114,12 @@
 
   "token_could_not_be_stored": "Le jeton n'a pas pu être enregistré :",
   "token_could_not_be_read": "Le jeton n'a pas pu être lu :",
-  "the_token_could_not_be_deleted.": "Le jeton n'a pas pu être supprimé."
+  "the_token_could_not_be_deleted.": "Le jeton n'a pas pu être supprimé.",
+
+  "rename_speaker_title": "Renommer l'interlocuteur",
+  "rename_speaker_subtitle": "Nom actuel",
+  "placeholder_new_name": "Entrer un nouveau nom...",
+  "btn_save": "Enregistrer",
+  "error_empty_name": "Le nom ne peut pas être vide.",
+  "error_save_failed": "Échec de l'enregistrement."
 }
