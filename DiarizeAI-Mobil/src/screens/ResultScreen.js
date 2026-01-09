@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
     View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView, 
     Alert, Dimensions, LayoutAnimation, Platform, UIManager, BackHandler, 
-    Modal, StatusBar, TextInput, KeyboardAvoidingView, Switch 
+    Modal, StatusBar, TextInput, KeyboardAvoidingView, Switch, ActivityIndicator 
 } from 'react-native';
 import { Ionicons, FontAwesome5, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -18,7 +18,7 @@ import * as Sharing from 'expo-sharing';
 
 import { deleteAnalysis, updateAnalysis } from '../utils/resultStorage';
 
-// Enable LayoutAnimation for smooth toggle
+// Enable LayoutAnimation
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -27,7 +27,7 @@ export default function ResultScreen({ route, navigation }) {
   const { data } = route.params || {};
   const { t } = useTranslation(); 
 
-  // --- LOCAL DATA STATE (For Updates) ---
+  // --- LOCAL DATA STATE ---
   const [analysisData, setAnalysisData] = useState(data);
 
   // --- AUDIO REFS & STATES ---
@@ -58,6 +58,7 @@ export default function ResultScreen({ route, navigation }) {
   // --- EXPORT MODAL STATES ---
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [exportTheme, setExportTheme] = useState('light'); // 'light' or 'dark'
+  const [isExporting, setIsExporting] = useState(false); 
 
   // 1. SECURITY CHECK
   if (!analysisData) {
@@ -164,93 +165,114 @@ export default function ResultScreen({ route, navigation }) {
 
   // --- EXPORT LOGIC ---
   const performExport = async (format) => {
-      setExportModalVisible(false); 
-
       if (format !== 'pdf') {
           Alert.alert(t('alert_info'), t('feature_coming_soon')); 
           return;
       }
 
+      setIsExporting(true); // YÜKLENİYOR...
+
       try {
-          // --- THEME CONFIGURATION ---
+          // --- THEME COLORS ---
           const isDark = exportTheme === 'dark';
           
-          // Force black background for Dark Mode
+          // Force HIGH CONTRAST colors
           const bgColor = isDark ? '#000000' : '#ffffff'; 
           const textColor = isDark ? '#ffffff' : '#000000';
-          const containerBg = isDark ? '#121212' : '#ffffff';
           
+          // Container colors
+          const containerBg = isDark ? '#1a1a1a' : '#ffffff';
+          const containerBorder = isDark ? '1px solid #333' : 'none';
+          
+          // Elements
           const h1Color = '#4A90E2';
           const h2Bg = isDark ? '#333333' : '#f0f0f0';
           const h2Color = isDark ? '#ffffff' : '#333333';
           const borderColor = isDark ? '#444' : '#ddd';
 
           // --- HTML GENERATION ---
-          // -webkit-print-color-adjust: exact; is CRITICAL for background colors in PDF
+          // Using a wrapper div with inline styles to FORCE background color
           let htmlContent = `
               <html>
               <head>
                   <meta charset="utf-8">
                   <style>
-                      @media print {
-                          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                      @page { margin: 0; }
+                      body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                      
+                      .full-page-wrapper {
+                          background-color: ${bgColor};
+                          color: ${textColor};
+                          width: 100%;
+                          min-height: 100vh;
+                          padding: 40px;
+                          box-sizing: border-box;
                       }
-                      body { 
-                          font-family: 'Helvetica', sans-serif; 
-                          padding: 40px; 
-                          color: ${textColor}; 
-                          background-color: ${bgColor}; 
-                          margin: 0;
-                      }
+
                       .container {
                           background-color: ${containerBg};
                           padding: 20px;
                           border-radius: 8px;
+                          border: ${containerBorder};
                       }
+
                       h1 { color: ${h1Color}; border-bottom: 2px solid ${h1Color}; padding-bottom: 10px; margin-top: 0; }
                       h2 { color: ${h2Color}; margin-top: 25px; background-color: ${h2Bg}; padding: 8px; border-radius: 4px; font-size: 18px; }
                       p { line-height: 1.6; font-size: 14px; margin-bottom: 10px; }
                       .bullet { margin-bottom: 6px; padding-left: 10px; }
+                      
                       .speaker-row { margin-top: 20px; border-bottom: 1px solid ${borderColor}; padding-bottom: 5px; margin-bottom: 8px; display: flex; align-items: center; }
                       .speaker { font-weight: bold; color: ${h1Color}; font-size: 15px; margin-right: 10px; }
                       .time { font-size: 11px; color: #888; }
+                      
                       .footer { margin-top: 60px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid ${borderColor}; padding-top: 15px;}
                   </style>
               </head>
               <body>
-                  <div class="container">
-                      <h1>${analysisData.originalName || "Audio Analysis"}</h1>
-                      <p><strong>${t('label_language')}:</strong> ${analysisData.language || "-"}</p>
-                      <p><strong>${t('label_type')}:</strong> ${analysisData.conversation_type || "-"}</p>
+                  <div class="full-page-wrapper">
+                      <div class="container">
+                          <h1>${analysisData.originalName || "Audio Analysis"}</h1>
+                          <p><strong>${t('label_language')}:</strong> ${analysisData.language || "-"}</p>
+                          <p><strong>${t('label_type')}:</strong> ${analysisData.conversation_type || "-"}</p>
 
-                      <h2>${t('label_summary')}</h2>
-                      <p>${(analysisData.summary || "").replace(/\n/g, "<br/>")}</p>
+                          <h2>${t('label_summary')}</h2>
+                          <p>${(analysisData.summary || "").replace(/\n/g, "<br/>")}</p>
 
-                      <h2>${t('label_keypoints')}</h2>
-                      ${keypoints.map(k => `<div class="bullet">• ${k}</div>`).join('')}
+                          <h2>${t('label_keypoints')}</h2>
+                          ${keypoints.map(k => `<div class="bullet">• ${k}</div>`).join('')}
 
-                      <h2>${t('label_transcript')}</h2>
-                      ${processedSegments.map(seg => `
-                          <div class="speaker-row">
-                              <span class="speaker">${seg.speaker || t('speaker_default')}</span> 
-                              <span class="time">[${formatTime(seg.start * 1000)}]</span>
+                          <h2>${t('label_transcript')}</h2>
+                          ${processedSegments.map(seg => `
+                              <div class="speaker-row">
+                                  <span class="speaker">${seg.speaker || t('speaker_default')}</span> 
+                                  <span class="time">[${formatTime(seg.start * 1000)}]</span>
+                              </div>
+                              <p>${seg.text}</p>
+                          `).join('')}
+
+                          <div class="footer">
+                              Generated by DiarizeAI - ${new Date().toLocaleString()}
                           </div>
-                          <p>${seg.text}</p>
-                      `).join('')}
-
-                      <div class="footer">
-                          Generated by DiarizeAI - ${new Date().toLocaleString()}
                       </div>
                   </div>
               </body>
               </html>
           `;
 
-          const { uri } = await Print.printToFileAsync({ html: htmlContent });
+          const { uri } = await Print.printToFileAsync({ 
+              html: htmlContent,
+              margins: { top: 0, bottom: 0, left: 0, right: 0 } // ZERO MARGINS
+          });
+          
           await Sharing.shareAsync(uri, { UTIType: 'public.item', mimeType: 'application/pdf', dialogTitle: t('export_pdf_title') });
+          
+          setExportModalVisible(false); // Success -> Close
 
       } catch (error) {
           Alert.alert(t('alert_error'), t('error_export_failed'));
+          console.error(error);
+      } finally {
+          setIsExporting(false); // Finished
       }
   };
 
@@ -702,29 +724,50 @@ export default function ResultScreen({ route, navigation }) {
         visible={exportModalVisible}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setExportModalVisible(false)}
+        onRequestClose={() => { if (!isExporting) setExportModalVisible(false); }}
       >
           <View style={styles.bottomSheetOverlay}>
               <View style={styles.bottomSheetContent}>
+                  
+                  {/* LOADING OVERLAY INSIDE MODAL */}
+                  {isExporting && (
+                      <View style={styles.loadingOverlay}>
+                          <ActivityIndicator size="large" color="#4A90E2" />
+                          <Text style={{color: '#FFF', marginTop: 15, fontWeight: 'bold'}}>{t('processing')}</Text>
+                      </View>
+                  )}
+
                   <View style={styles.modalHeader}>
                       <Text style={styles.modalTitle}>{t('export_title')}</Text>
-                      <TouchableOpacity onPress={() => setExportModalVisible(false)}>
-                          <Ionicons name="close" size={24} color="#FFF" />
+                      <TouchableOpacity onPress={() => !isExporting && setExportModalVisible(false)}>
+                          <Ionicons name="close" size={24} color={isExporting ? "#555" : "#FFF"} />
                       </TouchableOpacity>
                   </View>
 
                   <View style={styles.exportOptionsContainer}>
-                      <TouchableOpacity style={styles.exportOption} onPress={() => performExport('pdf')}>
+                      <TouchableOpacity 
+                        style={[styles.exportOption, isExporting && {opacity: 0.5}]} 
+                        onPress={() => !isExporting && performExport('pdf')}
+                        disabled={isExporting}
+                      >
                           <MaterialCommunityIcons name="file-pdf-box" size={32} color="#FF5252" />
                           <Text style={styles.exportOptionText}>{t('format_pdf')}</Text>
                       </TouchableOpacity>
 
-                      <TouchableOpacity style={styles.exportOption} onPress={() => performExport('word')}>
+                      <TouchableOpacity 
+                        style={[styles.exportOption, isExporting && {opacity: 0.5}]} 
+                        onPress={() => !isExporting && performExport('word')}
+                        disabled={isExporting}
+                      >
                           <MaterialCommunityIcons name="file-word-box" size={32} color="#4A90E2" />
                           <Text style={styles.exportOptionText}>{t('format_word')}</Text>
                       </TouchableOpacity>
 
-                      <TouchableOpacity style={styles.exportOption} onPress={() => performExport('pptx')}>
+                      <TouchableOpacity 
+                        style={[styles.exportOption, isExporting && {opacity: 0.5}]} 
+                        onPress={() => !isExporting && performExport('pptx')}
+                        disabled={isExporting}
+                      >
                           <MaterialCommunityIcons name="file-powerpoint-box" size={32} color="#F5A623" />
                           <Text style={styles.exportOptionText}>{t('format_pptx')}</Text>
                       </TouchableOpacity>
@@ -739,23 +782,32 @@ export default function ResultScreen({ route, navigation }) {
                       <View style={styles.themeSelector}>
                           <TouchableOpacity 
                              style={[styles.themeBtn, exportTheme === 'light' && styles.themeBtnActive]}
-                             onPress={() => setExportTheme('light')}
+                             onPress={() => !isExporting && setExportTheme('light')}
+                             disabled={isExporting}
                           >
                              <Ionicons name="sunny" size={16} color={exportTheme === 'light' ? '#333' : '#888'} />
-                             <Text style={[styles.themeText, exportTheme === 'light' && {color:'#333'}]}>{t('theme_light')}</Text>
+                             <Text style={[
+                                 styles.themeText, 
+                                 exportTheme === 'light' && {color:'#333'} // Light mode active = Dark Text
+                             ]}>{t('theme_light')}</Text>
                           </TouchableOpacity>
+                          
                           <TouchableOpacity 
                              style={[styles.themeBtn, exportTheme === 'dark' && styles.themeBtnActive]}
-                             onPress={() => setExportTheme('dark')}
+                             onPress={() => !isExporting && setExportTheme('dark')}
+                             disabled={isExporting}
                           >
-                             <Ionicons name="moon" size={16} color={exportTheme === 'dark' ? '#FFF' : '#888'} />
-                             <Text style={[styles.themeText, exportTheme === 'dark' && {color:'#FFF'}]}>{t('theme_dark')}</Text>
+                             <Ionicons name="moon" size={16} color={exportTheme === 'dark' ? '#000' : '#888'} />
+                             <Text style={[
+                                 styles.themeText, 
+                                 exportTheme === 'dark' && {color:'#000'} // Dark mode active (White BG) = Dark Text
+                             ]}>{t('theme_dark')}</Text>
                           </TouchableOpacity>
                       </View>
                   </View>
 
-                  <TouchableOpacity style={styles.cancelButtonFull} onPress={() => setExportModalVisible(false)}>
-                      <Text style={styles.btnText}>{t('btn_cancel')}</Text>
+                  <TouchableOpacity style={styles.cancelButtonFull} onPress={() => setExportModalVisible(false)} disabled={isExporting}>
+                      <Text style={[styles.btnText, isExporting && {color: '#888'}]}>{t('btn_cancel')}</Text>
                   </TouchableOpacity>
               </View>
           </View>
@@ -797,7 +849,7 @@ const styles = StyleSheet.create({
       borderRadius: 20,
       borderWidth: 1,
       borderColor: '#333',
-      marginRight: 20 // Aligned with the ScrollView padding (20px)
+      marginRight: 20 
   },
   slash: { color: '#666', fontSize: 16, marginHorizontal: 4, fontWeight: '300' },
 
@@ -876,6 +928,7 @@ const styles = StyleSheet.create({
   // EXPORT MODAL STYLES (BOTTOM SHEET STYLE)
   bottomSheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   bottomSheetContent: { backgroundColor: '#252525', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, minHeight: 300 },
+  loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 20 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   exportOptionsContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
   exportOption: { alignItems: 'center', padding: 10 },
