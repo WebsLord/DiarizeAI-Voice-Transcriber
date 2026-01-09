@@ -55,7 +55,7 @@ export default function ResultScreen({ route, navigation }) {
   const [targetSpeaker, setTargetSpeaker] = useState("");
   const [newSpeakerName, setNewSpeakerName] = useState("");
 
-  // --- EXPORT MODAL STATES (NEW) ---
+  // --- EXPORT MODAL STATES ---
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [exportTheme, setExportTheme] = useState('light'); // 'light' or 'dark'
 
@@ -164,62 +164,83 @@ export default function ResultScreen({ route, navigation }) {
 
   // --- EXPORT LOGIC ---
   const performExport = async (format) => {
-      setExportModalVisible(false); // Close modal
+      setExportModalVisible(false); 
 
-      // For now, only PDF is fully implemented. Word/PPTX logic can be added later.
       if (format !== 'pdf') {
           Alert.alert(t('alert_info'), t('feature_coming_soon')); 
           return;
       }
 
       try {
-          // THEME COLORS
+          // --- THEME CONFIGURATION ---
           const isDark = exportTheme === 'dark';
-          const bgColor = isDark ? '#121212' : '#ffffff';
-          const textColor = isDark ? '#ffffff' : '#333333';
+          
+          // Force black background for Dark Mode
+          const bgColor = isDark ? '#000000' : '#ffffff'; 
+          const textColor = isDark ? '#ffffff' : '#000000';
+          const containerBg = isDark ? '#121212' : '#ffffff';
+          
           const h1Color = '#4A90E2';
           const h2Bg = isDark ? '#333333' : '#f0f0f0';
           const h2Color = isDark ? '#ffffff' : '#333333';
           const borderColor = isDark ? '#444' : '#ddd';
 
+          // --- HTML GENERATION ---
+          // -webkit-print-color-adjust: exact; is CRITICAL for background colors in PDF
           let htmlContent = `
               <html>
               <head>
                   <meta charset="utf-8">
                   <style>
-                      body { font-family: 'Helvetica', sans-serif; padding: 20px; color: ${textColor}; background-color: ${bgColor}; }
-                      h1 { color: ${h1Color}; border-bottom: 2px solid ${h1Color}; padding-bottom: 10px; }
-                      h2 { color: ${h2Color}; margin-top: 20px; background-color: ${h2Bg}; padding: 5px; border-radius: 4px; }
-                      p { line-height: 1.5; font-size: 14px; margin-bottom: 10px; }
-                      .bullet { margin-bottom: 5px; }
-                      .speaker-row { margin-top: 15px; border-bottom: 1px solid ${borderColor}; padding-bottom: 5px; margin-bottom: 5px; }
-                      .speaker { font-weight: bold; color: ${h1Color}; font-size: 15px; }
-                      .time { font-size: 11px; color: #888; margin-left: 5px; }
-                      .footer { margin-top: 50px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid ${borderColor}; padding-top: 10px;}
+                      @media print {
+                          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                      }
+                      body { 
+                          font-family: 'Helvetica', sans-serif; 
+                          padding: 40px; 
+                          color: ${textColor}; 
+                          background-color: ${bgColor}; 
+                          margin: 0;
+                      }
+                      .container {
+                          background-color: ${containerBg};
+                          padding: 20px;
+                          border-radius: 8px;
+                      }
+                      h1 { color: ${h1Color}; border-bottom: 2px solid ${h1Color}; padding-bottom: 10px; margin-top: 0; }
+                      h2 { color: ${h2Color}; margin-top: 25px; background-color: ${h2Bg}; padding: 8px; border-radius: 4px; font-size: 18px; }
+                      p { line-height: 1.6; font-size: 14px; margin-bottom: 10px; }
+                      .bullet { margin-bottom: 6px; padding-left: 10px; }
+                      .speaker-row { margin-top: 20px; border-bottom: 1px solid ${borderColor}; padding-bottom: 5px; margin-bottom: 8px; display: flex; align-items: center; }
+                      .speaker { font-weight: bold; color: ${h1Color}; font-size: 15px; margin-right: 10px; }
+                      .time { font-size: 11px; color: #888; }
+                      .footer { margin-top: 60px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid ${borderColor}; padding-top: 15px;}
                   </style>
               </head>
               <body>
-                  <h1>${analysisData.originalName || "Audio Analysis"}</h1>
-                  <p><strong>${t('label_language')}:</strong> ${analysisData.language || "-"}</p>
-                  <p><strong>${t('label_type')}:</strong> ${analysisData.conversation_type || "-"}</p>
+                  <div class="container">
+                      <h1>${analysisData.originalName || "Audio Analysis"}</h1>
+                      <p><strong>${t('label_language')}:</strong> ${analysisData.language || "-"}</p>
+                      <p><strong>${t('label_type')}:</strong> ${analysisData.conversation_type || "-"}</p>
 
-                  <h2>${t('label_summary')}</h2>
-                  <p>${(analysisData.summary || "").replace(/\n/g, "<br/>")}</p>
+                      <h2>${t('label_summary')}</h2>
+                      <p>${(analysisData.summary || "").replace(/\n/g, "<br/>")}</p>
 
-                  <h2>${t('label_keypoints')}</h2>
-                  ${keypoints.map(k => `<div class="bullet">• ${k}</div>`).join('')}
+                      <h2>${t('label_keypoints')}</h2>
+                      ${keypoints.map(k => `<div class="bullet">• ${k}</div>`).join('')}
 
-                  <h2>${t('label_transcript')}</h2>
-                  ${processedSegments.map(seg => `
-                      <div class="speaker-row">
-                          <span class="speaker">${seg.speaker || t('speaker_default')}</span> 
-                          <span class="time">[${formatTime(seg.start * 1000)}]</span>
+                      <h2>${t('label_transcript')}</h2>
+                      ${processedSegments.map(seg => `
+                          <div class="speaker-row">
+                              <span class="speaker">${seg.speaker || t('speaker_default')}</span> 
+                              <span class="time">[${formatTime(seg.start * 1000)}]</span>
+                          </div>
+                          <p>${seg.text}</p>
+                      `).join('')}
+
+                      <div class="footer">
+                          Generated by DiarizeAI - ${new Date().toLocaleString()}
                       </div>
-                      <p>${seg.text}</p>
-                  `).join('')}
-
-                  <div class="footer">
-                      Generated by DiarizeAI - ${new Date().toLocaleString()} (${exportTheme.toUpperCase()} THEME)
                   </div>
               </body>
               </html>
@@ -465,9 +486,16 @@ export default function ResultScreen({ route, navigation }) {
           </TouchableOpacity>
           <Text style={[styles.title, {flex:1}]} numberOfLines={1}>{t('analysis_karaoke_title')}</Text>
           
-          {/* EXPORT BUTTON - Added MarginRight for spacing */}
-          <TouchableOpacity onPress={() => setExportModalVisible(true)} style={{padding: 5, marginRight: 10}}>
-              <Ionicons name="share-outline" size={24} color="#FFF" />
+          {/* EXPORT ICONS TRIGGER - ALIGNED RIGHT */}
+          <TouchableOpacity 
+            onPress={() => setExportModalVisible(true)} 
+            style={styles.exportTrigger}
+          >
+              <MaterialCommunityIcons name="file-pdf-box" size={20} color="#FF5252" />
+              <Text style={styles.slash}>/</Text>
+              <MaterialCommunityIcons name="file-word-box" size={20} color="#4A90E2" />
+              <Text style={styles.slash}>/</Text>
+              <MaterialCommunityIcons name="file-powerpoint-box" size={20} color="#F5A623" />
           </TouchableOpacity>
       </View>
 
@@ -759,6 +787,20 @@ const styles = StyleSheet.create({
   backButton: { marginRight: 15, padding: 5 },
   title: { fontSize: 24, fontWeight: 'bold', color: '#FFF' },
   
+  // EXPORT TRIGGER BUTTON IN HEADER
+  exportTrigger: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#252525',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: '#333',
+      marginRight: 20 // Aligned with the ScrollView padding (20px)
+  },
+  slash: { color: '#666', fontSize: 16, marginHorizontal: 4, fontWeight: '300' },
+
   // PLAYER
   playerCard: {
       backgroundColor: '#252525',
