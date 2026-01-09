@@ -17,6 +17,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing'; 
 
 import { deleteAnalysis, updateAnalysis } from '../utils/resultStorage';
+import { generateWord } from '../utils/wordGenerator'; // NEW IMPORT
 
 // Enable LayoutAnimation
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -165,41 +166,60 @@ export default function ResultScreen({ route, navigation }) {
 
   // --- EXPORT LOGIC ---
   const performExport = async (format) => {
-      if (format !== 'pdf') {
+      if (format !== 'pdf' && format !== 'word') {
           Alert.alert(t('alert_info'), t('feature_coming_soon')); 
           return;
       }
 
-      setIsExporting(true); // YÜKLENİYOR...
+      setIsExporting(true); 
 
       try {
-          // --- THEME COLORS ---
+          // --- WORD EXPORT ---
+          if (format === 'word') {
+              // 1. Generate base64 content using our new utility
+              const base64 = await generateWord(analysisData, t, exportTheme);
+              
+              // 2. Save to file
+              const fileName = `Analysis_${Date.now()}.docx`;
+              const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+              await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+              
+              // 3. Share
+              await Sharing.shareAsync(fileUri, { 
+                  UTIType: 'com.microsoft.word.doc', 
+                  mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+                  dialogTitle: t('export_title') 
+              });
+              
+              setExportModalVisible(false);
+              return;
+          }
+
+          // --- PDF EXPORT (Existing Logic) ---
           const isDark = exportTheme === 'dark';
-          
-          // Force HIGH CONTRAST colors
           const bgColor = isDark ? '#000000' : '#ffffff'; 
           const textColor = isDark ? '#ffffff' : '#000000';
-          
-          // Container colors
-          const containerBg = isDark ? '#1a1a1a' : '#ffffff';
+          const containerBg = isDark ? '#121212' : '#ffffff';
           const containerBorder = isDark ? '1px solid #333' : 'none';
-          
-          // Elements
           const h1Color = '#4A90E2';
           const h2Bg = isDark ? '#333333' : '#f0f0f0';
           const h2Color = isDark ? '#ffffff' : '#333333';
           const borderColor = isDark ? '#444' : '#ddd';
 
-          // --- HTML GENERATION ---
-          // Using a wrapper div with inline styles to FORCE background color
           let htmlContent = `
               <html>
               <head>
                   <meta charset="utf-8">
                   <style>
                       @page { margin: 0; }
-                      body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                      
+                      body { 
+                          margin: 0; padding: 0;
+                          font-family: 'Helvetica', sans-serif; 
+                          color: ${textColor}; 
+                          background-color: ${bgColor}; 
+                          -webkit-print-color-adjust: exact; 
+                          print-color-adjust: exact;
+                      }
                       .full-page-wrapper {
                           background-color: ${bgColor};
                           color: ${textColor};
@@ -208,23 +228,19 @@ export default function ResultScreen({ route, navigation }) {
                           padding: 40px;
                           box-sizing: border-box;
                       }
-
                       .container {
                           background-color: ${containerBg};
                           padding: 20px;
                           border-radius: 8px;
                           border: ${containerBorder};
                       }
-
                       h1 { color: ${h1Color}; border-bottom: 2px solid ${h1Color}; padding-bottom: 10px; margin-top: 0; }
                       h2 { color: ${h2Color}; margin-top: 25px; background-color: ${h2Bg}; padding: 8px; border-radius: 4px; font-size: 18px; }
                       p { line-height: 1.6; font-size: 14px; margin-bottom: 10px; }
                       .bullet { margin-bottom: 6px; padding-left: 10px; }
-                      
                       .speaker-row { margin-top: 20px; border-bottom: 1px solid ${borderColor}; padding-bottom: 5px; margin-bottom: 8px; display: flex; align-items: center; }
                       .speaker { font-weight: bold; color: ${h1Color}; font-size: 15px; margin-right: 10px; }
                       .time { font-size: 11px; color: #888; }
-                      
                       .footer { margin-top: 60px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid ${borderColor}; padding-top: 15px;}
                   </style>
               </head>
@@ -261,18 +277,17 @@ export default function ResultScreen({ route, navigation }) {
 
           const { uri } = await Print.printToFileAsync({ 
               html: htmlContent,
-              margins: { top: 0, bottom: 0, left: 0, right: 0 } // ZERO MARGINS
+              margins: { top: 0, bottom: 0, left: 0, right: 0 } 
           });
           
           await Sharing.shareAsync(uri, { UTIType: 'public.item', mimeType: 'application/pdf', dialogTitle: t('export_pdf_title') });
-          
-          setExportModalVisible(false); // Success -> Close
+          setExportModalVisible(false); 
 
       } catch (error) {
           Alert.alert(t('alert_error'), t('error_export_failed'));
           console.error(error);
       } finally {
-          setIsExporting(false); // Finished
+          setIsExporting(false); 
       }
   };
 

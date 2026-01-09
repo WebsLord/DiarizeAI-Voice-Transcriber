@@ -134,7 +134,12 @@
   "format_word": "Word",
   "format_pptx": "PowerPoint",
   "alert_info": "Bilgi",
-  "feature_coming_soon": "Bu özellik çok yakında!"
+  "feature_coming_soon": "Bu özellik çok yakında!",
+
+  "error_export_failed": "Dışa aktarma başarısız oldu.",
+  "export_pdf_title": "Analizi Paylaş (PDF)"
+  
+
 
  
 }
