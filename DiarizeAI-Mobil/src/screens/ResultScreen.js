@@ -1,7 +1,7 @@
 // src/screens/ResultScreen.js
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView, Alert, Dimensions, LayoutAnimation, Platform, UIManager, BackHandler, Modal, StatusBar } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView, Alert, Dimensions, LayoutAnimation, Platform, UIManager, BackHandler, Modal, StatusBar, TextInput, KeyboardAvoidingView } from 'react-native';
 import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
@@ -9,8 +9,10 @@ import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import Slider from '@react-native-community/slider';
 import { useTranslation } from 'react-i18next'; 
 import { Proximity } from 'expo-sensors'; 
+import * as Print from 'expo-print'; 
+import * as Sharing from 'expo-sharing'; 
 
-import { deleteAnalysis } from '../utils/resultStorage';
+import { deleteAnalysis, updateAnalysis } from '../utils/resultStorage'; // Added updateAnalysis
 
 // Enable LayoutAnimation for smooth toggle
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -20,6 +22,11 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export default function ResultScreen({ route, navigation }) {
   const { data } = route.params || {};
   const { t } = useTranslation(); 
+
+  // --- LOCAL DATA STATE (For Updates) ---
+  // --- YEREL VERİ DURUMU (Güncellemeler İçin) ---
+  // We use local state to reflect changes (like renaming) immediately
+  const [analysisData, setAnalysisData] = useState(data);
 
   // --- AUDIO REFS & STATES ---
   const soundRef = useRef(null); 
@@ -36,14 +43,19 @@ export default function ResultScreen({ route, navigation }) {
   // --- UI STATES ---
   const [showHighlights, setShowHighlights] = useState(true);
   
-  // --- AUDIO MODE STATE (Speaker vs Earpiece) ---
+  // --- AUDIO MODE STATE ---
   const [isEarpieceMode, setIsEarpieceMode] = useState(false);
   
-  // --- PROXIMITY STATE (Android Only) ---
+  // --- PROXIMITY STATE ---
   const [isNearEar, setIsNearEar] = useState(false);
 
+  // --- RENAME SPEAKER STATES ---
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [targetSpeaker, setTargetSpeaker] = useState("");
+  const [newSpeakerName, setNewSpeakerName] = useState("");
+
   // 1. SECURITY CHECK
-  if (!data) {
+  if (!analysisData) {
     return (
       <SafeAreaView style={styles.container}>
         <Text style={styles.text}>{t('data_not_found')}</Text>
@@ -56,22 +68,28 @@ export default function ResultScreen({ route, navigation }) {
 
   // --- 2. DATA PREPARATION ---
   const hasKeywords = useMemo(() => {
-      const k = (data.usedSettings && data.usedSettings.keywords) || data.input_keywords || "";
+      const k = (analysisData.usedSettings && analysisData.usedSettings.keywords) || analysisData.input_keywords || "";
       return k && k.trim().length > 0;
-  }, [data]);
+  }, [analysisData]);
 
   const processedSegments = useMemo(() => {
     let rawSegments = [];
-    let source = data.segments || data.segments_json || data.transcript_segments || (data.result ? data.result.segments : null);
+    // Prioritize direct array if modified, else fallback to parsed JSON
+    let source = analysisData.segments || 
+                 analysisData.segments_json || 
+                 analysisData.transcript_segments ||
+                 (analysisData.result ? analysisData.result.segments : null);
 
     try {
         if (!source) return []; 
-        if (typeof source === 'string') {
+        
+        if (Array.isArray(source)) {
+            rawSegments = source;
+        } else if (typeof source === 'string') {
             rawSegments = JSON.parse(source);
             if (typeof rawSegments === 'string') rawSegments = JSON.parse(rawSegments);
-        } else {
-            rawSegments = source;
         }
+
         if (!Array.isArray(rawSegments)) return [];
 
         return rawSegments.map(seg => ({
@@ -83,28 +101,70 @@ export default function ResultScreen({ route, navigation }) {
         console.log("Segment parse error:", e);
         return [];
     }
-  }, [data]);
+  }, [analysisData]); // Re-calc when analysisData changes
 
   const keypoints = useMemo(() => {
     try {
-        if (!data.keypoints && !data.keypoints_json) return [];
-        let src = data.keypoints_json || data.keypoints;
+        if (!analysisData.keypoints && !analysisData.keypoints_json) return [];
+        let src = analysisData.keypoints_json || analysisData.keypoints;
         let points = typeof src === 'string' ? JSON.parse(src) : src;
         if (typeof points === 'string') points = JSON.parse(points);
         return Array.isArray(points) ? points : [];
     } catch (e) { return []; }
-  }, [data]);
+  }, [analysisData]);
 
   const flags = useMemo(() => {
-      const f = data.flags || (data.result ? data.result.flags : []) || [];
+      const f = analysisData.flags || (analysisData.result ? analysisData.result.flags : []) || [];
       return Array.isArray(f) ? f : [];
-  }, [data]);
+  }, [analysisData]);
 
   // --- TOGGLE HANDLER ---
   const toggleHighlights = () => {
       if (!hasKeywords) return; 
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowHighlights(!showHighlights);
+  };
+
+  // --- SPEAKER RENAME HANDLERS ---
+  const handleSpeakerPress = (speakerName) => {
+      setTargetSpeaker(speakerName);
+      setNewSpeakerName(speakerName); // Pre-fill with current name
+      setRenameModalVisible(true);
+  };
+
+  const confirmRename = async () => {
+      if (!newSpeakerName.trim()) {
+          Alert.alert(t('alert_error'), t('error_empty_name'));
+          return;
+      }
+
+      // 1. Create a deep copy of segments
+      const updatedSegments = processedSegments.map(seg => {
+          if (seg.speaker === targetSpeaker) {
+              return { ...seg, speaker: newSpeakerName };
+          }
+          return seg;
+      });
+
+      // 2. Prepare new data object
+      const updatedData = {
+          ...analysisData,
+          segments: updatedSegments, // Save as array
+          // Clear legacy fields to avoid conflict
+          segments_json: undefined 
+      };
+
+      // 3. Update State & Storage
+      setAnalysisData(updatedData); // Update UI
+      setRenameModalVisible(false);
+      
+      try {
+          if (updatedData.localId) {
+              await updateAnalysis(updatedData.localId, { segments: updatedSegments });
+          }
+      } catch (error) {
+          Alert.alert(t('alert_error'), t('error_save_failed'));
+      }
   };
 
   // --- MARKDOWN PARSER ---
@@ -138,11 +198,10 @@ export default function ResultScreen({ route, navigation }) {
   // --- 3. LIFECYCLE & SENSORS ---
   useEffect(() => {
       checkLocalFile();
-      setAudioMode(false); // Default to speaker
+      setAudioMode(false); 
       
       let proximitySubscription;
       
-      // --- ANDROID AUTOMATION ---
       if (Platform.OS === 'android') {
           const startProximity = async () => {
               try {
@@ -152,9 +211,9 @@ export default function ResultScreen({ route, navigation }) {
                     setIsNearEar(!!isNear);
                     
                     if (isNear) {
-                        setAudioMode(true); // Ear
+                        setAudioMode(true); 
                     } else {
-                        setAudioMode(false); // Speaker
+                        setAudioMode(false); 
                         pauseIfPlaying(); 
                     }
                 });
@@ -174,11 +233,8 @@ export default function ResultScreen({ route, navigation }) {
       };
   }, []); 
 
-  // --- 4. BACK BUTTON LOCK (ANDROID) ---
   useEffect(() => {
-      const backAction = () => {
-          return isNearEar; 
-      };
+      const backAction = () => isNearEar; 
       const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
       return () => backHandler.remove();
   }, [isNearEar]);
@@ -210,7 +266,6 @@ export default function ResultScreen({ route, navigation }) {
       }
   };
 
-  // --- MANUAL TOGGLE (For iOS mainly) ---
   const toggleSpeaker = () => {
       const newMode = !isEarpieceMode;
       setAudioMode(newMode);
@@ -219,10 +274,10 @@ export default function ResultScreen({ route, navigation }) {
   // --- FILE OPERATIONS ---
   const checkLocalFile = async () => {
       let targetPath = null;
-      if (data.originalName) {
-          targetPath = FileSystem.documentDirectory + data.originalName;
-      } else if (data.audio_path) {
-          const fileName = data.audio_path.split(/[/\\]/).pop(); 
+      if (analysisData.originalName) {
+          targetPath = FileSystem.documentDirectory + analysisData.originalName;
+      } else if (analysisData.audio_path) {
+          const fileName = analysisData.audio_path.split(/[/\\]/).pop(); 
           targetPath = FileSystem.documentDirectory + fileName;
       }
 
@@ -304,8 +359,8 @@ export default function ResultScreen({ route, navigation }) {
 
   const performRelink = async (pickedFile) => {
       try {
-          let fileName = data.originalName;
-          if (!fileName && data.audio_path) fileName = data.audio_path.split(/[/\\]/).pop();
+          let fileName = analysisData.originalName;
+          if (!fileName && analysisData.audio_path) fileName = analysisData.audio_path.split(/[/\\]/).pop();
           if (!fileName) return;
           const targetPath = FileSystem.documentDirectory + fileName;
           await FileSystem.copyAsync({ from: pickedFile.uri, to: targetPath });
@@ -318,10 +373,62 @@ export default function ResultScreen({ route, navigation }) {
       Alert.alert(t('alert_delete_title'), t('alert_delete_confirm'), [
           { text: t('cancel'), style: "cancel" },
           { text: t('delete'), style: "destructive", onPress: async () => {
-              if (data.localId) await deleteAnalysis(data.localId);
+              if (analysisData.localId) await deleteAnalysis(analysisData.localId);
               navigation.goBack();
           }}
       ]);
+  };
+
+  const handleExport = async () => {
+    try {
+        let htmlContent = `
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    body { font-family: 'Helvetica', sans-serif; padding: 20px; color: #333; }
+                    h1 { color: #4A90E2; border-bottom: 2px solid #4A90E2; padding-bottom: 10px; }
+                    h2 { color: #333; margin-top: 20px; background-color: #f0f0f0; padding: 5px; }
+                    p { line-height: 1.5; font-size: 14px; }
+                    .bullet { margin-bottom: 5px; }
+                    .speaker { font-weight: bold; color: #4A90E2; margin-top: 10px; }
+                    .time { font-size: 11px; color: #888; margin-left: 5px; }
+                    .footer { margin-top: 50px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #ddd; padding-top: 10px;}
+                </style>
+            </head>
+            <body>
+                <h1>${analysisData.originalName || "Audio Analysis"}</h1>
+                <p><strong>${t('label_language')}:</strong> ${analysisData.language || "-"}</p>
+                <p><strong>${t('label_type')}:</strong> ${analysisData.conversation_type || "-"}</p>
+
+                <h2>${t('label_summary')}</h2>
+                <p>${(analysisData.summary || "").replace(/\n/g, "<br/>")}</p>
+
+                <h2>${t('label_keypoints')}</h2>
+                ${keypoints.map(k => `<div class="bullet">• ${k}</div>`).join('')}
+
+                <h2>${t('label_transcript')}</h2>
+                ${processedSegments.map(seg => `
+                    <div class="speaker">
+                        ${seg.speaker || t('speaker_default')} 
+                        <span class="time">[${formatTime(seg.start * 1000)}]</span>
+                    </div>
+                    <p>${seg.text}</p>
+                `).join('')}
+
+                <div class="footer">
+                    Generated by AI Audio Analyst App - ${new Date().toLocaleString()}
+                </div>
+            </body>
+            </html>
+        `;
+
+        const { uri } = await Print.printToFileAsync({ html: htmlContent });
+        await Sharing.shareAsync(uri, { UTIType: 'public.item', mimeType: 'application/pdf', dialogTitle: t('export_pdf_title') });
+
+    } catch (error) {
+        Alert.alert(t('alert_error'), t('error_export_failed'));
+    }
   };
 
   const formatTime = (millis) => {
@@ -344,7 +451,11 @@ export default function ResultScreen({ route, navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.title}>{t('analysis_karaoke_title')}</Text>
+          <Text style={[styles.title, {flex:1}]} numberOfLines={1}>{t('analysis_karaoke_title')}</Text>
+          
+          <TouchableOpacity onPress={handleExport} style={{padding: 5}}>
+              <Ionicons name="share-outline" size={24} color="#FFF" />
+          </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -373,7 +484,7 @@ export default function ResultScreen({ route, navigation }) {
                     <Text style={styles.timeText}>{formatTime(duration)}</Text>
                 </View>
 
-                {/* --- AUDIO OUTPUT TOGGLE --- */}
+                {/* AUDIO TOGGLE */}
                 <View style={{flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10}}>
                     <TouchableOpacity onPress={toggleSpeaker} style={styles.audioModeBtn}>
                         <Ionicons 
@@ -402,7 +513,7 @@ export default function ResultScreen({ route, navigation }) {
             </View>
         )}
 
-        {/* --- SUMMARY CARD WITH TOGGLE --- */}
+        {/* SUMMARY */}
         <View style={styles.card}>
           <View style={[styles.cardHeader, { justifyContent: 'space-between' }]}> 
             <View style={{flexDirection:'row', alignItems:'center'}}>
@@ -429,18 +540,18 @@ export default function ResultScreen({ route, navigation }) {
             </TouchableOpacity>
           </View>
           
-          {highlightText(data.summary || t('no_summary_available'), styles.cardText)}
+          {highlightText(analysisData.summary || t('no_summary_available'), styles.cardText)}
         </View>
 
         {/* INFO */}
         <View style={styles.row}>
           <View style={[styles.card, { flex: 1, marginRight: 10 }]}>
             <Text style={styles.label}>{t('label_type')}</Text>
-            <Text style={styles.value}>{data.conversation_type || t('unknown')}</Text>
+            <Text style={styles.value}>{analysisData.conversation_type || t('unknown')}</Text>
           </View>
           <View style={[styles.card, { flex: 1, marginLeft: 10 }]}>
             <Text style={styles.label}>{t('label_language')}</Text>
-            <Text style={styles.value}>{data.language || t('unknown')}</Text>
+            <Text style={styles.value}>{analysisData.language || t('unknown')}</Text>
           </View>
         </View>
 
@@ -458,7 +569,7 @@ export default function ResultScreen({ route, navigation }) {
           ))}
         </View>
 
-        {/* TRANSCRIPT */}
+        {/* TRANSCRIPT WITH EDITABLE SPEAKER */}
         <View style={styles.card}>
             <View style={styles.cardHeader}>
                 <Ionicons name="chatbubbles-outline" size={24} color="#50E3C2" />
@@ -485,9 +596,14 @@ export default function ResultScreen({ route, navigation }) {
                             )}
 
                             <View style={{flexDirection:'row', justifyContent:'space-between', marginBottom: 5}}>
-                                <Text style={[styles.speakerName, isActive && { color: '#000' }]}>
-                                    {seg.speaker || t('speaker_default')}:
-                                </Text>
+                                {/* SPEAKER NAME - CLICKABLE */}
+                                <TouchableOpacity onPress={() => handleSpeakerPress(seg.speaker)} style={{flexDirection:'row', alignItems:'center'}}>
+                                    <Text style={[styles.speakerName, isActive && { color: '#000' }]}>
+                                        {seg.speaker || t('speaker_default')}:
+                                    </Text>
+                                    <MaterialIcons name="edit" size={12} color="#666" style={{marginLeft: 5, opacity: 0.7}} />
+                                </TouchableOpacity>
+
                                 <Text style={[styles.timeStamp, isActive && { color: '#333' }]}>
                                     {formatTime(seg.start * 1000)}
                                 </Text>
@@ -501,13 +617,46 @@ export default function ResultScreen({ route, navigation }) {
                     );
                 })
             ) : (
-                <Text style={styles.transcriptText}>{data.clean_transcript || t('no_text_available')}</Text>
+                <Text style={styles.transcriptText}>{analysisData.clean_transcript || t('no_text_available')}</Text>
             )}
         </View>
 
       </ScrollView>
 
-      {/* --- PROXIMITY MODAL --- */}
+      {/* RENAME MODAL */}
+      <Modal
+        visible={renameModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setRenameModalVisible(false)}
+      >
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>{t('rename_speaker_title')}</Text>
+                  <Text style={styles.modalSubtitle}>{t('rename_speaker_subtitle')}: "{targetSpeaker}"</Text>
+                  
+                  <TextInput 
+                      style={styles.input}
+                      value={newSpeakerName}
+                      onChangeText={setNewSpeakerName}
+                      placeholder={t('placeholder_new_name')}
+                      placeholderTextColor="#888"
+                      autoFocus={true}
+                  />
+
+                  <View style={styles.modalButtons}>
+                      <TouchableOpacity style={[styles.modalBtn, styles.btnCancel]} onPress={() => setRenameModalVisible(false)}>
+                          <Text style={styles.btnText}>{t('btn_cancel')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.modalBtn, styles.btnSave]} onPress={confirmRename}>
+                          <Text style={styles.btnText}>{t('btn_save')}</Text>
+                      </TouchableOpacity>
+                  </View>
+              </View>
+          </KeyboardAvoidingView>
+      </Modal>
+
+      {/* PROXIMITY BLACK SCREEN (Android) */}
       {Platform.OS === 'android' && (
           <Modal 
             visible={isNearEar} 
@@ -554,11 +703,8 @@ const styles = StyleSheet.create({
   },
   timeText: { color: '#CCC', fontSize: 12, fontVariant: ['tabular-nums'], width: 40, textAlign: 'center' },
   
-  // AUDIO MODE BUTTON
-  audioModeBtn: {
-      flexDirection: 'row', alignItems: 'center', backgroundColor: '#333', 
-      paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15
-  },
+  // AUDIO MODE
+  audioModeBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#333', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15 },
   audioModeText: { color: '#CCC', fontSize: 12, marginLeft: 6 },
 
   // CARDS
@@ -568,22 +714,9 @@ const styles = StyleSheet.create({
   cardText: { color: '#CCC', fontSize: 15, lineHeight: 22 },
   transcriptText: { color: '#AAA', fontSize: 14, lineHeight: 22, fontStyle: 'italic' },
   
-  // TOGGLE BUTTON STYLE
-  toggleButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: 'rgba(255,255,255,0.05)',
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: '#333'
-  },
-  toggleText: {
-      fontSize: 12,
-      fontWeight: '600',
-      marginLeft: 6
-  },
+  // TOGGLE
+  toggleButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: '#333' },
+  toggleText: { fontSize: 12, fontWeight: '600', marginLeft: 6 },
 
   row: { flexDirection: 'row', marginBottom: 15 },
   label: { color: '#888', fontSize: 12, marginBottom: 5 },
@@ -592,43 +725,32 @@ const styles = StyleSheet.create({
   bullet: { color: '#F5A623', fontSize: 20, marginRight: 10, lineHeight: 22 },
 
   // KARAOKE SEGMENTS
-  segmentBox: {
-      marginBottom: 15, padding: 12, borderRadius: 10,
-      backgroundColor: '#2A2A2A', borderLeftWidth: 4, borderLeftColor: '#4A90E2',
-      opacity: 0.8, position: 'relative', overflow: 'visible'   
-  },
-  activeSegment: {
-      backgroundColor: '#50E3C2', borderLeftColor: '#FFF',
-      transform: [{ scale: 1.02 }], opacity: 1,
-      shadowColor: "#50E3C2", shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.5, shadowRadius: 10, elevation: 5
-  },
-  flagBadge: {
-      position: 'absolute', top: -10, left: -10, backgroundColor: '#1E1E1E', 
-      width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center',
-      zIndex: 10, borderWidth: 1, borderColor: '#F5A623',
-      shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.5, shadowRadius: 2, elevation: 5
-  },
+  segmentBox: { marginBottom: 15, padding: 12, borderRadius: 10, backgroundColor: '#2A2A2A', borderLeftWidth: 4, borderLeftColor: '#4A90E2', opacity: 0.8, position: 'relative', overflow: 'visible' },
+  activeSegment: { backgroundColor: '#50E3C2', borderLeftColor: '#FFF', transform: [{ scale: 1.02 }], opacity: 1, shadowColor: "#50E3C2", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 5 },
+  flagBadge: { position: 'absolute', top: -10, left: -10, backgroundColor: '#1E1E1E', width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center', zIndex: 10, borderWidth: 1, borderColor: '#F5A623', shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.5, shadowRadius: 2, elevation: 5 },
   speakerName: { color: '#4A90E2', fontWeight: 'bold', fontSize: 14, marginLeft: 5 },
   segmentText: { color: '#FFF', fontSize: 15, lineHeight: 22 },
   timeStamp: { fontSize: 11, color: '#666' },
 
   // ERROR
-  errorCard: {
-      backgroundColor: '#2A1515', borderRadius: 12, padding: 20, marginBottom: 20,
-      alignItems: 'center', borderColor: '#FF5252', borderWidth: 1
-  },
+  errorCard: { backgroundColor: '#2A1515', borderRadius: 12, padding: 20, marginBottom: 20, alignItems: 'center', borderColor: '#FF5252', borderWidth: 1 },
   errorTitle: { color: '#FF5252', fontSize: 18, fontWeight: 'bold', marginVertical: 10 },
   errorActions: { flexDirection: 'row', gap: 10 },
   relinkButton: { backgroundColor: '#4A90E2', padding: 10, borderRadius: 8 },
   deleteButton: { backgroundColor: '#FF5252', padding: 10, borderRadius: 8 },
   btnText: { color: 'white', fontWeight: 'bold' },
 
-  // BLACK OVERLAY STYLE
-  blackOverlay: {
-      flex: 1,
-      backgroundColor: '#000',
-      justifyContent: 'center',
-      alignItems: 'center',
-  }
+  // BLACK OVERLAY
+  blackOverlay: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
+
+  // MODAL STYLES
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: '#252525', padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#444' },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFF', marginBottom: 5, textAlign: 'center' },
+  modalSubtitle: { fontSize: 14, color: '#AAA', marginBottom: 20, textAlign: 'center' },
+  input: { backgroundColor: '#333', color: '#FFF', padding: 12, borderRadius: 8, marginBottom: 20, fontSize: 16 },
+  modalButtons: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end' },
+  modalBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
+  btnCancel: { backgroundColor: '#444' },
+  btnSave: { backgroundColor: '#4A90E2' },
 });
