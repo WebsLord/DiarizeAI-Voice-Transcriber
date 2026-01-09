@@ -122,7 +122,20 @@
   "placeholder_new_name": "Yeni isim girin...",
   "btn_save": "Kaydet",
   "error_empty_name": "İsim boş olamaz.",
-  "error_save_failed": "Kayıt edilemedi."
+  "error_save_failed": "Kayıt edilemedi.",
+
+  
+  "export_title": "Dışa Aktar",
+  "label_settings": "AYARLAR",
+  "label_theme": "Tema",
+  "theme_light": "Açık",
+  "theme_dark": "Koyu",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "Bilgi",
+  "feature_coming_soon": "Bu özellik çok yakında!"
+
   
  
 

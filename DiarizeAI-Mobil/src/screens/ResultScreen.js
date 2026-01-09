@@ -1,8 +1,12 @@
 // src/screens/ResultScreen.js
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView, Alert, Dimensions, LayoutAnimation, Platform, UIManager, BackHandler, Modal, StatusBar, TextInput, KeyboardAvoidingView } from 'react-native';
-import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
+import { 
+    View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView, 
+    Alert, Dimensions, LayoutAnimation, Platform, UIManager, BackHandler, 
+    Modal, StatusBar, TextInput, KeyboardAvoidingView, Switch 
+} from 'react-native';
+import { Ionicons, FontAwesome5, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av'; 
@@ -12,7 +16,7 @@ import { Proximity } from 'expo-sensors';
 import * as Print from 'expo-print'; 
 import * as Sharing from 'expo-sharing'; 
 
-import { deleteAnalysis, updateAnalysis } from '../utils/resultStorage'; // Added updateAnalysis
+import { deleteAnalysis, updateAnalysis } from '../utils/resultStorage';
 
 // Enable LayoutAnimation for smooth toggle
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -24,13 +28,10 @@ export default function ResultScreen({ route, navigation }) {
   const { t } = useTranslation(); 
 
   // --- LOCAL DATA STATE (For Updates) ---
-  // --- YEREL VERİ DURUMU (Güncellemeler İçin) ---
-  // We use local state to reflect changes (like renaming) immediately
   const [analysisData, setAnalysisData] = useState(data);
 
   // --- AUDIO REFS & STATES ---
   const soundRef = useRef(null); 
-  
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
@@ -54,6 +55,10 @@ export default function ResultScreen({ route, navigation }) {
   const [targetSpeaker, setTargetSpeaker] = useState("");
   const [newSpeakerName, setNewSpeakerName] = useState("");
 
+  // --- EXPORT MODAL STATES (NEW) ---
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportTheme, setExportTheme] = useState('light'); // 'light' or 'dark'
+
   // 1. SECURITY CHECK
   if (!analysisData) {
     return (
@@ -74,7 +79,6 @@ export default function ResultScreen({ route, navigation }) {
 
   const processedSegments = useMemo(() => {
     let rawSegments = [];
-    // Prioritize direct array if modified, else fallback to parsed JSON
     let source = analysisData.segments || 
                  analysisData.segments_json || 
                  analysisData.transcript_segments ||
@@ -82,7 +86,6 @@ export default function ResultScreen({ route, navigation }) {
 
     try {
         if (!source) return []; 
-        
         if (Array.isArray(source)) {
             rawSegments = source;
         } else if (typeof source === 'string') {
@@ -101,7 +104,7 @@ export default function ResultScreen({ route, navigation }) {
         console.log("Segment parse error:", e);
         return [];
     }
-  }, [analysisData]); // Re-calc when analysisData changes
+  }, [analysisData]); 
 
   const keypoints = useMemo(() => {
     try {
@@ -128,7 +131,7 @@ export default function ResultScreen({ route, navigation }) {
   // --- SPEAKER RENAME HANDLERS ---
   const handleSpeakerPress = (speakerName) => {
       setTargetSpeaker(speakerName);
-      setNewSpeakerName(speakerName); // Pre-fill with current name
+      setNewSpeakerName(speakerName); 
       setRenameModalVisible(true);
   };
 
@@ -137,27 +140,19 @@ export default function ResultScreen({ route, navigation }) {
           Alert.alert(t('alert_error'), t('error_empty_name'));
           return;
       }
-
-      // 1. Create a deep copy of segments
       const updatedSegments = processedSegments.map(seg => {
           if (seg.speaker === targetSpeaker) {
               return { ...seg, speaker: newSpeakerName };
           }
           return seg;
       });
-
-      // 2. Prepare new data object
       const updatedData = {
           ...analysisData,
-          segments: updatedSegments, // Save as array
-          // Clear legacy fields to avoid conflict
+          segments: updatedSegments, 
           segments_json: undefined 
       };
-
-      // 3. Update State & Storage
-      setAnalysisData(updatedData); // Update UI
+      setAnalysisData(updatedData); 
       setRenameModalVisible(false);
-      
       try {
           if (updatedData.localId) {
               await updateAnalysis(updatedData.localId, { segments: updatedSegments });
@@ -166,6 +161,78 @@ export default function ResultScreen({ route, navigation }) {
           Alert.alert(t('alert_error'), t('error_save_failed'));
       }
   };
+
+  // --- EXPORT LOGIC ---
+  const performExport = async (format) => {
+      setExportModalVisible(false); // Close modal
+
+      // For now, only PDF is fully implemented. Word/PPTX logic can be added later.
+      if (format !== 'pdf') {
+          Alert.alert(t('alert_info'), t('feature_coming_soon')); 
+          return;
+      }
+
+      try {
+          // THEME COLORS
+          const isDark = exportTheme === 'dark';
+          const bgColor = isDark ? '#121212' : '#ffffff';
+          const textColor = isDark ? '#ffffff' : '#333333';
+          const h1Color = '#4A90E2';
+          const h2Bg = isDark ? '#333333' : '#f0f0f0';
+          const h2Color = isDark ? '#ffffff' : '#333333';
+          const borderColor = isDark ? '#444' : '#ddd';
+
+          let htmlContent = `
+              <html>
+              <head>
+                  <meta charset="utf-8">
+                  <style>
+                      body { font-family: 'Helvetica', sans-serif; padding: 20px; color: ${textColor}; background-color: ${bgColor}; }
+                      h1 { color: ${h1Color}; border-bottom: 2px solid ${h1Color}; padding-bottom: 10px; }
+                      h2 { color: ${h2Color}; margin-top: 20px; background-color: ${h2Bg}; padding: 5px; border-radius: 4px; }
+                      p { line-height: 1.5; font-size: 14px; margin-bottom: 10px; }
+                      .bullet { margin-bottom: 5px; }
+                      .speaker-row { margin-top: 15px; border-bottom: 1px solid ${borderColor}; padding-bottom: 5px; margin-bottom: 5px; }
+                      .speaker { font-weight: bold; color: ${h1Color}; font-size: 15px; }
+                      .time { font-size: 11px; color: #888; margin-left: 5px; }
+                      .footer { margin-top: 50px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid ${borderColor}; padding-top: 10px;}
+                  </style>
+              </head>
+              <body>
+                  <h1>${analysisData.originalName || "Audio Analysis"}</h1>
+                  <p><strong>${t('label_language')}:</strong> ${analysisData.language || "-"}</p>
+                  <p><strong>${t('label_type')}:</strong> ${analysisData.conversation_type || "-"}</p>
+
+                  <h2>${t('label_summary')}</h2>
+                  <p>${(analysisData.summary || "").replace(/\n/g, "<br/>")}</p>
+
+                  <h2>${t('label_keypoints')}</h2>
+                  ${keypoints.map(k => `<div class="bullet">• ${k}</div>`).join('')}
+
+                  <h2>${t('label_transcript')}</h2>
+                  ${processedSegments.map(seg => `
+                      <div class="speaker-row">
+                          <span class="speaker">${seg.speaker || t('speaker_default')}</span> 
+                          <span class="time">[${formatTime(seg.start * 1000)}]</span>
+                      </div>
+                      <p>${seg.text}</p>
+                  `).join('')}
+
+                  <div class="footer">
+                      Generated by DiarizeAI - ${new Date().toLocaleString()} (${exportTheme.toUpperCase()} THEME)
+                  </div>
+              </body>
+              </html>
+          `;
+
+          const { uri } = await Print.printToFileAsync({ html: htmlContent });
+          await Sharing.shareAsync(uri, { UTIType: 'public.item', mimeType: 'application/pdf', dialogTitle: t('export_pdf_title') });
+
+      } catch (error) {
+          Alert.alert(t('alert_error'), t('error_export_failed'));
+      }
+  };
+
 
   // --- MARKDOWN PARSER ---
   const highlightText = (text, baseStyle) => {
@@ -201,7 +268,6 @@ export default function ResultScreen({ route, navigation }) {
       setAudioMode(false); 
       
       let proximitySubscription;
-      
       if (Platform.OS === 'android') {
           const startProximity = async () => {
               try {
@@ -209,7 +275,6 @@ export default function ResultScreen({ route, navigation }) {
                 proximitySubscription = Proximity.addListener((result) => {
                     const isNear = result.proximity; 
                     setIsNearEar(!!isNear);
-                    
                     if (isNear) {
                         setAudioMode(true); 
                     } else {
@@ -223,7 +288,6 @@ export default function ResultScreen({ route, navigation }) {
           };
           startProximity();
       }
-
       return () => {
         if (soundRef.current) {
           soundRef.current.stopAsync();
@@ -379,58 +443,6 @@ export default function ResultScreen({ route, navigation }) {
       ]);
   };
 
-  const handleExport = async () => {
-    try {
-        let htmlContent = `
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <style>
-                    body { font-family: 'Helvetica', sans-serif; padding: 20px; color: #333; }
-                    h1 { color: #4A90E2; border-bottom: 2px solid #4A90E2; padding-bottom: 10px; }
-                    h2 { color: #333; margin-top: 20px; background-color: #f0f0f0; padding: 5px; }
-                    p { line-height: 1.5; font-size: 14px; }
-                    .bullet { margin-bottom: 5px; }
-                    .speaker { font-weight: bold; color: #4A90E2; margin-top: 10px; }
-                    .time { font-size: 11px; color: #888; margin-left: 5px; }
-                    .footer { margin-top: 50px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #ddd; padding-top: 10px;}
-                </style>
-            </head>
-            <body>
-                <h1>${analysisData.originalName || "Audio Analysis"}</h1>
-                <p><strong>${t('label_language')}:</strong> ${analysisData.language || "-"}</p>
-                <p><strong>${t('label_type')}:</strong> ${analysisData.conversation_type || "-"}</p>
-
-                <h2>${t('label_summary')}</h2>
-                <p>${(analysisData.summary || "").replace(/\n/g, "<br/>")}</p>
-
-                <h2>${t('label_keypoints')}</h2>
-                ${keypoints.map(k => `<div class="bullet">• ${k}</div>`).join('')}
-
-                <h2>${t('label_transcript')}</h2>
-                ${processedSegments.map(seg => `
-                    <div class="speaker">
-                        ${seg.speaker || t('speaker_default')} 
-                        <span class="time">[${formatTime(seg.start * 1000)}]</span>
-                    </div>
-                    <p>${seg.text}</p>
-                `).join('')}
-
-                <div class="footer">
-                    Generated by AI Audio Analyst App - ${new Date().toLocaleString()}
-                </div>
-            </body>
-            </html>
-        `;
-
-        const { uri } = await Print.printToFileAsync({ html: htmlContent });
-        await Sharing.shareAsync(uri, { UTIType: 'public.item', mimeType: 'application/pdf', dialogTitle: t('export_pdf_title') });
-
-    } catch (error) {
-        Alert.alert(t('alert_error'), t('error_export_failed'));
-    }
-  };
-
   const formatTime = (millis) => {
     if (!millis || millis < 0) return "00:00";
     const totalSeconds = Math.floor(millis / 1000);
@@ -453,7 +465,8 @@ export default function ResultScreen({ route, navigation }) {
           </TouchableOpacity>
           <Text style={[styles.title, {flex:1}]} numberOfLines={1}>{t('analysis_karaoke_title')}</Text>
           
-          <TouchableOpacity onPress={handleExport} style={{padding: 5}}>
+          {/* EXPORT BUTTON - Added MarginRight for spacing */}
+          <TouchableOpacity onPress={() => setExportModalVisible(true)} style={{padding: 5, marginRight: 10}}>
               <Ionicons name="share-outline" size={24} color="#FFF" />
           </TouchableOpacity>
       </View>
@@ -656,6 +669,70 @@ export default function ResultScreen({ route, navigation }) {
           </KeyboardAvoidingView>
       </Modal>
 
+      {/* EXPORT OPTIONS MODAL */}
+      <Modal
+        visible={exportModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setExportModalVisible(false)}
+      >
+          <View style={styles.bottomSheetOverlay}>
+              <View style={styles.bottomSheetContent}>
+                  <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>{t('export_title')}</Text>
+                      <TouchableOpacity onPress={() => setExportModalVisible(false)}>
+                          <Ionicons name="close" size={24} color="#FFF" />
+                      </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.exportOptionsContainer}>
+                      <TouchableOpacity style={styles.exportOption} onPress={() => performExport('pdf')}>
+                          <MaterialCommunityIcons name="file-pdf-box" size={32} color="#FF5252" />
+                          <Text style={styles.exportOptionText}>{t('format_pdf')}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity style={styles.exportOption} onPress={() => performExport('word')}>
+                          <MaterialCommunityIcons name="file-word-box" size={32} color="#4A90E2" />
+                          <Text style={styles.exportOptionText}>{t('format_word')}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity style={styles.exportOption} onPress={() => performExport('pptx')}>
+                          <MaterialCommunityIcons name="file-powerpoint-box" size={32} color="#F5A623" />
+                          <Text style={styles.exportOptionText}>{t('format_pptx')}</Text>
+                      </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <Text style={styles.settingsTitle}>{t('label_settings')}</Text>
+                  
+                  <View style={styles.settingRow}>
+                      <Text style={styles.settingLabel}>{t('label_theme')}</Text>
+                      <View style={styles.themeSelector}>
+                          <TouchableOpacity 
+                             style={[styles.themeBtn, exportTheme === 'light' && styles.themeBtnActive]}
+                             onPress={() => setExportTheme('light')}
+                          >
+                             <Ionicons name="sunny" size={16} color={exportTheme === 'light' ? '#333' : '#888'} />
+                             <Text style={[styles.themeText, exportTheme === 'light' && {color:'#333'}]}>{t('theme_light')}</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                             style={[styles.themeBtn, exportTheme === 'dark' && styles.themeBtnActive]}
+                             onPress={() => setExportTheme('dark')}
+                          >
+                             <Ionicons name="moon" size={16} color={exportTheme === 'dark' ? '#FFF' : '#888'} />
+                             <Text style={[styles.themeText, exportTheme === 'dark' && {color:'#FFF'}]}>{t('theme_dark')}</Text>
+                          </TouchableOpacity>
+                      </View>
+                  </View>
+
+                  <TouchableOpacity style={styles.cancelButtonFull} onPress={() => setExportModalVisible(false)}>
+                      <Text style={styles.btnText}>{t('btn_cancel')}</Text>
+                  </TouchableOpacity>
+              </View>
+          </View>
+      </Modal>
+
       {/* PROXIMITY BLACK SCREEN (Android) */}
       {Platform.OS === 'android' && (
           <Modal 
@@ -743,7 +820,7 @@ const styles = StyleSheet.create({
   // BLACK OVERLAY
   blackOverlay: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
 
-  // MODAL STYLES
+  // MODAL STYLES (RENAME)
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 20 },
   modalContent: { backgroundColor: '#252525', padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#444' },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFF', marginBottom: 5, textAlign: 'center' },
@@ -753,4 +830,21 @@ const styles = StyleSheet.create({
   modalBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
   btnCancel: { backgroundColor: '#444' },
   btnSave: { backgroundColor: '#4A90E2' },
+
+  // EXPORT MODAL STYLES (BOTTOM SHEET STYLE)
+  bottomSheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  bottomSheetContent: { backgroundColor: '#252525', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, minHeight: 300 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  exportOptionsContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
+  exportOption: { alignItems: 'center', padding: 10 },
+  exportOptionText: { color: '#FFF', marginTop: 8, fontSize: 14, fontWeight: '500' },
+  divider: { height: 1, backgroundColor: '#444', marginVertical: 15 },
+  settingsTitle: { color: '#888', fontSize: 14, marginBottom: 15, fontWeight: '600' },
+  settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  settingLabel: { color: '#FFF', fontSize: 16 },
+  themeSelector: { flexDirection: 'row', backgroundColor: '#333', borderRadius: 20, padding: 2 },
+  themeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 18 },
+  themeBtnActive: { backgroundColor: '#FFF' },
+  themeText: { marginLeft: 5, fontSize: 12, fontWeight: '600', color: '#888' },
+  cancelButtonFull: { backgroundColor: '#444', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
 });
