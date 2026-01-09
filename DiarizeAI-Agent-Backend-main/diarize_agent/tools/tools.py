@@ -48,7 +48,7 @@ def transcribe_audio_with_whisper(audio_file_path: str) -> dict:
                              # For more consistent results, creativity is lacking, hallucination reduction
             no_speech_threshold=0.6, # sessizlik algılama eşiği konuşma olasılığı %60 altındaysa sessizlik kabul et ve atla
                                      # Silence detection threshold: If the probability of speech is below 60%, acknowledge and skip the silence.
-            logprob_threshold=-1.0,
+            logprob_threshold=-1.0, 
             compression_ratio_threshold=2.4,
             condition_on_previous_text=True, # bağlamı koru bir cümleyi çevirirken önceki cümleleri de dikkate alır
                                              # Preserve context: When translating a sentence, consider the sentences that precede it.

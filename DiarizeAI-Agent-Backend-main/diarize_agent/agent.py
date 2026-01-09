@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field, ValidationError
 class SegmentItem(BaseModel):
     start: float = Field(..., description="Start time in seconds")
     end: float = Field(..., description="End time in seconds")
-    speaker: str = Field(..., description="Real Name (e.g. Erdem) or Speaker Label (e.g. Speaker 1)")
+    speaker: str = Field(..., description="Real Name (e.g. Efe) or Speaker Label (e.g. Speaker 1)")
     text: str = Field(..., description="Corrected/Translated text content")
 
 class StructuredSummary(BaseModel):
