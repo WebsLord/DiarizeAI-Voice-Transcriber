@@ -121,5 +121,18 @@
   "placeholder_new_name": "Masukkan nama baru...",
   "btn_save": "Simpan",
   "error_empty_name": "Nama tidak boleh kosong.",
-  "error_save_failed": "Gagal menyimpan."
+  "error_save_failed": "Gagal menyimpan.",
+
+  "export_title": "Ekspor",
+  "label_settings": "PENGATURAN",
+  "label_theme": "Tema",
+  "theme_light": "Terang",
+  "theme_dark": "Gelap",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "Info",
+  "feature_coming_soon": "Fitur segera hadir!",
+  "error_export_failed": "Ekspor gagal.",
+  "export_pdf_title": "Bagikan Analisis (PDF)"
 }

@@ -122,5 +122,18 @@
   "placeholder_new_name": "नया नाम दर्ज करें...",
   "btn_save": "सहेजें",
   "error_empty_name": "नाम खाली नहीं हो सकता।",
-  "error_save_failed": "सहेजना विफल रहा।"
+  "error_save_failed": "सहेजना विफल रहा।",
+
+  "export_title": "निर्यात (Export)",
+  "label_settings": "सेटिंग्स",
+  "label_theme": "थीम",
+  "theme_light": "लाइट",
+  "theme_dark": "डार्क",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "जानकारी",
+  "feature_coming_soon": "यह सुविधा जल्द ही आ रही है!",
+  "error_export_failed": "निर्यात विफल रहा।",
+  "export_pdf_title": "विश्लेषण साझा करें (PDF)"
 }

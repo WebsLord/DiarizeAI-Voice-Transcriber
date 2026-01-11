@@ -121,5 +121,18 @@
   "placeholder_new_name": "Entrer un nouveau nom...",
   "btn_save": "Enregistrer",
   "error_empty_name": "Le nom ne peut pas être vide.",
-  "error_save_failed": "Échec de l'enregistrement."
+  "error_save_failed": "Échec de l'enregistrement.",
+
+  "export_title": "Exporter",
+  "label_settings": "PARAMÈTRES",
+  "label_theme": "Thème",
+  "theme_light": "Clair",
+  "theme_dark": "Sombre",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "Info",
+  "feature_coming_soon": "Fonctionnalité à venir !",
+  "error_export_failed": "L'exportation a échoué.",
+  "export_pdf_title": "Partager l'analyse (PDF)"
 }

@@ -121,5 +121,18 @@
   "placeholder_new_name": "نام جدید وارد کنید...",
   "btn_save": "ذخیره",
   "error_empty_name": "نام نمی‌تواند خالی باشد.",
-  "error_save_failed": "ذخیره نشد."
+  "error_save_failed": "ذخیره نشد.",
+
+  "export_title": "خروجی گرفتن",
+  "label_settings": "تنظیمات",
+  "label_theme": "تم",
+  "theme_light": "روشن",
+  "theme_dark": "تیره",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "اطلاعات",
+  "feature_coming_soon": "این ویژگی به زودی می‌آید!",
+  "error_export_failed": "خروجی گرفتن ناموفق بود.",
+  "export_pdf_title": "اشتراک‌گذاری تحلیل (PDF)"
 }

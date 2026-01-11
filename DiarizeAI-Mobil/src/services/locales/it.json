@@ -121,5 +121,18 @@
   "placeholder_new_name": "Inserisci nuovo nome...",
   "btn_save": "Salva",
   "error_empty_name": "Il nome non può essere vuoto.",
-  "error_save_failed": "Salvataggio fallito."
+  "error_save_failed": "Salvataggio fallito.",
+
+  "export_title": "Esporta",
+  "label_settings": "IMPOSTAZIONI",
+  "label_theme": "Tema",
+  "theme_light": "Chiaro",
+  "theme_dark": "Scuro",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "Info",
+  "feature_coming_soon": "Funzionalità in arrivo!",
+  "error_export_failed": "Esportazione fallita.",
+  "export_pdf_title": "Condividi Analisi (PDF)"
 }
