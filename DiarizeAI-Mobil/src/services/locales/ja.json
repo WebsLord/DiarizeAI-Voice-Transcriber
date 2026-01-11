@@ -121,5 +121,18 @@
   "placeholder_new_name": "新しい名前を入力...",
   "btn_save": "保存",
   "error_empty_name": "名前は空にできません。",
-  "error_save_failed": "保存に失敗しました。"
+  "error_save_failed": "保存に失敗しました。",
+
+  "export_title": "エクスポート",
+  "label_settings": "設定",
+  "label_theme": "テーマ",
+  "theme_light": "ライト",
+  "theme_dark": "ダーク",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "情報",
+  "feature_coming_soon": "近日公開予定！",
+  "error_export_failed": "エクスポートに失敗しました。",
+  "export_pdf_title": "分析を共有 (PDF)"
 }

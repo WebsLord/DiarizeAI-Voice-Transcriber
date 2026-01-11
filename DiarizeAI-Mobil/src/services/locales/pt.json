@@ -121,5 +121,18 @@
   "placeholder_new_name": "Digite o novo nome...",
   "btn_save": "Salvar",
   "error_empty_name": "O nome não pode estar vazio.",
-  "error_save_failed": "Falha ao salvar."
+  "error_save_failed": "Falha ao salvar.",
+
+  "export_title": "Exportar",
+  "label_settings": "CONFIGURAÇÕES",
+  "label_theme": "Tema",
+  "theme_light": "Claro",
+  "theme_dark": "Escuro",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "Info",
+  "feature_coming_soon": "Funcionalidade em breve!",
+  "error_export_failed": "A exportação falhou.",
+  "export_pdf_title": "Partilhar Análise (PDF)"
 }

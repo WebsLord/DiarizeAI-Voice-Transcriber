@@ -121,5 +121,18 @@
   "placeholder_new_name": "输入新名称...",
   "btn_save": "保存",
   "error_empty_name": "名称不能为空。",
-  "error_save_failed": "保存失败。"
+  "error_save_failed": "保存失败。",
+
+  "export_title": "导出",
+  "label_settings": "设置",
+  "label_theme": "主题",
+  "theme_light": "浅色",
+  "theme_dark": "深色",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "信息",
+  "feature_coming_soon": "即将推出！",
+  "error_export_failed": "导出失败。",
+  "export_pdf_title": "分享分析 (PDF)"
 }

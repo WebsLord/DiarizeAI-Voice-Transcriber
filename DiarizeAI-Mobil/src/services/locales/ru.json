@@ -121,5 +121,18 @@
   "placeholder_new_name": "Введите новое имя...",
   "btn_save": "Сохранить",
   "error_empty_name": "Имя не может быть пустым.",
-  "error_save_failed": "Не удалось сохранить."
+  "error_save_failed": "Не удалось сохранить.",
+
+  "export_title": "Экспорт",
+  "label_settings": "НАСТРОЙКИ",
+  "label_theme": "Тема",
+  "theme_light": "Светлая",
+  "theme_dark": "Темная",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "Инфо",
+  "feature_coming_soon": "Скоро будет доступно!",
+  "error_export_failed": "Ошибка экспорта.",
+  "export_pdf_title": "Поделиться анализом (PDF)"
 }

@@ -122,6 +122,19 @@
   "placeholder_new_name": "Wpisz nową nazwę...",
   "btn_save": "Zapisz",
   "error_empty_name": "Nazwa nie może być pusta.",
-  "error_save_failed": "Zapisywanie nie powiodło się."
+  "error_save_failed": "Zapisywanie nie powiodło się.",
+
+  "export_title": "Eksportuj",
+  "label_settings": "USTAWIENIA",
+  "label_theme": "Motyw",
+  "theme_light": "Jasny",
+  "theme_dark": "Ciemny",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "Info",
+  "feature_coming_soon": "Funkcja wkrótce dostępna!",
+  "error_export_failed": "Eksport nie powiódł się.",
+  "export_pdf_title": "Udostępnij analizę (PDF)"
 
 }

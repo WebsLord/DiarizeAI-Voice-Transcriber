@@ -121,5 +121,18 @@
   "placeholder_new_name": "새 이름 입력...",
   "btn_save": "저장",
   "error_empty_name": "이름은 비워둘 수 없습니다.",
-  "error_save_failed": "저장 실패."
+  "error_save_failed": "저장 실패.",
+
+  "export_title": "내보내기",
+  "label_settings": "설정",
+  "label_theme": "테마",
+  "theme_light": "라이트",
+  "theme_dark": "다크",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "정보",
+  "feature_coming_soon": "곧 제공될 기능입니다!",
+  "error_export_failed": "내보내기 실패.",
+  "export_pdf_title": "분석 공유 (PDF)"
 }
