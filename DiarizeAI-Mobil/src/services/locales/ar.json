@@ -120,5 +120,20 @@
   "placeholder_new_name": "أدخل اسماً جديداً...",
   "btn_save": "حفظ",
   "error_empty_name": "لا يمكن أن يكون الاسم فارغاً.",
-  "error_save_failed": "فشل الحفظ."
+  "error_save_failed": "فشل الحفظ.",
+
+  
+  "export_title": "تصدير",
+  "label_settings": "الإعدادات",
+  "label_theme": "المظهر",
+  "theme_light": "فاتح",
+  "theme_dark": "داكن",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "معلومات",
+  "feature_coming_soon": "الميزة قادمة قريباً!",
+  "error_export_failed": "فشل التصدير.",
+  "export_pdf_title": "مشاركة التحليل (PDF)"
+
 }

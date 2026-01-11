@@ -122,5 +122,18 @@
   "placeholder_new_name": "Enter new name...",
   "btn_save": "Save",
   "error_empty_name": "Name cannot be empty.",
-  "error_save_failed": "Save failed."
+  "error_save_failed": "Save failed.",
+
+  "export_title": "Export",
+  "label_settings": "SETTINGS",
+  "label_theme": "Theme",
+  "theme_light": "Light",
+  "theme_dark": "Dark",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "Info",
+  "feature_coming_soon": "Feature coming soon!",
+  "error_export_failed": "Export failed.",
+  "export_pdf_title": "Share Analysis (PDF)"
 }

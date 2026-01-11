@@ -122,6 +122,21 @@
   "placeholder_new_name": "Ingresar nuevo nombre...",
   "btn_save": "Guardar",
   "error_empty_name": "El nombre no puede estar vacío.",
-  "error_save_failed": "Error al guardar."
+  "error_save_failed": "Error al guardar.",
+
+  "export_title": "Exportar",
+  "label_settings": "AJUSTES",
+  "label_theme": "Tema",
+  "theme_light": "Claro",
+  "theme_dark": "Oscuro",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "Info",
+  "feature_coming_soon": "¡Próximamente!",
+  "error_export_failed": "La exportación falló.",
+  "export_pdf_title": "Compartir Análisis (PDF)"
+
+  
 
 }

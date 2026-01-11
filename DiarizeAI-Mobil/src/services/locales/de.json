@@ -122,7 +122,20 @@
   "placeholder_new_name": "Neuen Namen eingeben...",
   "btn_save": "Speichern",
   "error_empty_name": "Name darf nicht leer sein.",
-  "error_save_failed": "Speichern fehlgeschlagen."
+  "error_save_failed": "Speichern fehlgeschlagen.",
+
+  "export_title": "Exportieren",
+  "label_settings": "EINSTELLUNGEN",
+  "label_theme": "Thema",
+  "theme_light": "Hell",
+  "theme_dark": "Dunkel",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "Info",
+  "feature_coming_soon": "Funktion kommt bald!",
+  "error_export_failed": "Export fehlgeschlagen.",
+  "export_pdf_title": "Analyse teilen (PDF)"
 
   
 }

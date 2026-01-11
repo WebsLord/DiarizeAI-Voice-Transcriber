@@ -121,5 +121,18 @@
   "placeholder_new_name": "Yeni ad daxil edin...",
   "btn_save": "Yadda saxla",
   "error_empty_name": "Ad boş ola bilməz.",
-  "error_save_failed": "Yadda saxlamaq mümkün olmadı."
+  "error_save_failed": "Yadda saxlamaq mümkün olmadı.",
+
+  "export_title": "İxrac et",
+  "label_settings": "TƏNZİMLƏMƏLƏR",
+  "label_theme": "Mövzu",
+  "theme_light": "Açıq",
+  "theme_dark": "Qaranlıq",
+  "format_pdf": "PDF",
+  "format_word": "Word",
+  "format_pptx": "PowerPoint",
+  "alert_info": "Məlumat",
+  "feature_coming_soon": "Bu xüsusiyyət tezliklə gələcək!",
+  "error_export_failed": "İxrac uğursuz oldu.",
+  "export_pdf_title": "Analizi Paylaş (PDF)"
 }
