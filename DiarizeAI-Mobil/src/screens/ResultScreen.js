@@ -16,11 +16,13 @@ import { Proximity } from 'expo-sensors';
 import * as Print from 'expo-print'; 
 import * as Sharing from 'expo-sharing'; 
 
+// API SERVİSİNİ İÇERİ ALIYORUZ
+import { apiService } from '../services/api'; 
 import { deleteAnalysis, updateAnalysis } from '../utils/resultStorage';
 import { generateWord } from '../utils/wordGenerator'; 
-import { generatePPTX } from '../utils/pptxGenerator'; // NEW IMPORT
+import { generatePPTX } from '../utils/pptxGenerator'; 
 
-// Enable LayoutAnimation
+// LayoutAnimation aktivasyonu
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -29,40 +31,41 @@ export default function ResultScreen({ route, navigation }) {
   const { data } = route.params || {};
   const { t } = useTranslation(); 
 
-  // --- LOCAL DATA STATE ---
+  // --- YEREL VERİ STATE'İ ---
   const [analysisData, setAnalysisData] = useState(data);
 
-  // --- AUDIO REFS & STATES ---
+  // --- SES OYNATICI STATE'LERİ ---
   const soundRef = useRef(null); 
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
   
-  // --- FILE STATES ---
+  // --- DOSYA STATE'LERİ ---
   const [localUri, setLocalUri] = useState(null);
   const [isFileMissing, setIsFileMissing] = useState(false);
 
-  // --- UI STATES ---
+  // --- ARAYÜZ STATE'LERİ ---
   const [showHighlights, setShowHighlights] = useState(true);
-  
-  // --- AUDIO MODE STATE ---
   const [isEarpieceMode, setIsEarpieceMode] = useState(false);
-  
-  // --- PROXIMITY STATE ---
   const [isNearEar, setIsNearEar] = useState(false);
 
-  // --- RENAME SPEAKER STATES ---
+  // --- İSİM DEĞİŞTİRME STATE'LERİ ---
   const [renameModalVisible, setRenameModalVisible] = useState(false);
   const [targetSpeaker, setTargetSpeaker] = useState("");
   const [newSpeakerName, setNewSpeakerName] = useState("");
 
-  // --- EXPORT MODAL STATES ---
+  // --- DIŞA AKTARMA (EXPORT) STATE'LERİ ---
   const [exportModalVisible, setExportModalVisible] = useState(false);
-  const [exportTheme, setExportTheme] = useState('light'); // 'light' or 'dark'
+  const [exportTheme, setExportTheme] = useState('light'); 
   const [isExporting, setIsExporting] = useState(false); 
 
-  // 1. SECURITY CHECK
+  // --- DÜZENLEME & YENİDEN İŞLEME (EDIT & RETRY) STATE'LERİ ---
+  const [isEditing, setIsEditing] = useState(false);
+  const [editableSegments, setEditableSegments] = useState([]); 
+  const [isReprocessing, setIsReprocessing] = useState(false); 
+
+  // 1. GÜVENLİK KONTROLÜ
   if (!analysisData) {
     return (
       <SafeAreaView style={styles.container}>
@@ -74,7 +77,7 @@ export default function ResultScreen({ route, navigation }) {
     );
   }
 
-  // --- 2. DATA PREPARATION ---
+  // --- 2. VERİ HAZIRLIĞI ---
   const hasKeywords = useMemo(() => {
       const k = (analysisData.usedSettings && analysisData.usedSettings.keywords) || analysisData.input_keywords || "";
       return k && k.trim().length > 0;
@@ -124,14 +127,13 @@ export default function ResultScreen({ route, navigation }) {
       return Array.isArray(f) ? f : [];
   }, [analysisData]);
 
-  // --- TOGGLE HANDLER ---
+  // --- ETKİLEŞİM FONKSİYONLARI ---
   const toggleHighlights = () => {
       if (!hasKeywords) return; 
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowHighlights(!showHighlights);
   };
 
-  // --- SPEAKER RENAME HANDLERS ---
   const handleSpeakerPress = (speakerName) => {
       setTargetSpeaker(speakerName);
       setNewSpeakerName(speakerName); 
@@ -165,12 +167,11 @@ export default function ResultScreen({ route, navigation }) {
       }
   };
 
-// --- EXPORT LOGIC ---
+  // --- EXPORT MANTIĞI ---
   const performExport = async (format) => {
-      setIsExporting(true); // START LOADING
+      setIsExporting(true); 
 
       try {
-          // --- 1. PDF EXPORT ---
           if (format === 'pdf') {
                 const isDark = exportTheme === 'dark';
                 const bgColor = isDark ? '#000000' : '#ffffff'; 
@@ -234,10 +235,7 @@ export default function ResultScreen({ route, navigation }) {
                 await Sharing.shareAsync(uri, { UTIType: 'public.item', mimeType: 'application/pdf', dialogTitle: t('export_pdf_title') });
                 setExportModalVisible(false);
           }
-
-          // --- 2. WORD EXPORT ---
           else if (format === 'word') {
-              // Word generator import edildi varsayılıyor: import { generateWord } from '../utils/wordGenerator';
               const base64 = await generateWord(analysisData, t, exportTheme);
               const fileName = `Analysis_${Date.now()}.docx`;
               const fileUri = `${FileSystem.documentDirectory}${fileName}`;
@@ -250,10 +248,7 @@ export default function ResultScreen({ route, navigation }) {
               });
               setExportModalVisible(false);
           }
-
-          // --- 3. PPTX EXPORT ---
           else if (format === 'pptx') {
-              // PPTX generator import edildi varsayılıyor: import { generatePPTX } from '../utils/pptxGenerator';
               const base64 = await generatePPTX(analysisData, t, exportTheme);
               const fileName = `Analysis_${Date.now()}.pptx`;
               const fileUri = `${FileSystem.documentDirectory}${fileName}`;
@@ -275,6 +270,100 @@ export default function ResultScreen({ route, navigation }) {
       }
   };
 
+  // --- DÜZENLEME & YENİDEN İŞLEME (EDIT & RE-PROCESS - REAL API) ---
+
+  const startEditing = () => {
+      setEditableSegments(JSON.parse(JSON.stringify(processedSegments)));
+      setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+      setIsEditing(false);
+      setEditableSegments([]);
+  };
+
+  const handleTextChange = (text, index) => {
+      const updated = [...editableSegments];
+      updated[index].text = text;
+      setEditableSegments(updated);
+  };
+
+  const saveAndCheckReprocess = async () => {
+      const updatedData = {
+          ...analysisData,
+          segments: editableSegments,
+          segments_json: undefined 
+      };
+
+      try {
+          if (updatedData.localId) {
+              await updateAnalysis(updatedData.localId, { segments: editableSegments });
+          }
+          setAnalysisData(updatedData); 
+          setIsEditing(false);
+
+          Alert.alert(
+              t('alert_reprocess_title'),
+              t('alert_reprocess_msg'),
+              [
+                  {
+                      text: t('btn_just_save'),
+                      style: 'cancel'
+                  },
+                  {
+                      text: t('btn_reprocess'),
+                      onPress: () => performReprocess(updatedData)
+                  }
+              ]
+          );
+
+      } catch (error) {
+          Alert.alert(t('alert_error'), t('error_save_failed'));
+      }
+  };
+
+  // --- GERÇEK API ÇAĞRISI (BU KISIM ÖNEMLİ) ---
+  const performReprocess = async (currentData) => {
+      // Backend'deki Job ID'yi alıyoruz
+      const jobId = currentData.id || currentData.job_id;
+
+      if (!jobId) {
+          Alert.alert(t('alert_error'), "İşlem ID'si bulunamadı (Job ID Missing). Lütfen önce dosyayı işleyin.");
+          return;
+      }
+
+      setIsReprocessing(true);
+
+      try {
+          // 1. Düzenlenmiş metni sunucuya gönder ve yeniden analizi başlat
+          // apiService.reAnalyze backend'deki /api/jobs/<id>/reanalyze rotasına gider
+          await apiService.reAnalyze(jobId, currentData.segments);
+
+          // 2. Sonuç çıkana kadar bekle (Polling - 10 Dk Timeout)
+          const finalResult = await apiService.pollUntilComplete(jobId);
+
+          // 3. Gelen yeni veriyi (Yeni Özet ve Anahtar Noktalar) yerel veriyle birleştir
+          const mergedData = {
+              ...currentData,
+              ...finalResult, // Backend'den gelen güncel alanlar (summary, keypoints)
+              segments: currentData.segments // Segmentler zaten bizde günceldi
+          };
+
+          if (mergedData.localId) {
+              // Veritabanını güncelle
+              await updateAnalysis(mergedData.localId, mergedData);
+          }
+
+          setAnalysisData(mergedData);
+          Alert.alert(t('alert_success'), t('alert_reprocess_success'));
+
+      } catch (error) {
+          console.error("Re-process Failed:", error);
+          Alert.alert(t('alert_error'), t('alert_process_failed') + " " + error.message);
+      } finally {
+          setIsReprocessing(false);
+      }
+  };
 
   // --- MARKDOWN PARSER ---
   const highlightText = (text, baseStyle) => {
@@ -345,7 +434,7 @@ export default function ResultScreen({ route, navigation }) {
       return () => backHandler.remove();
   }, [isNearEar]);
 
-  // --- AUDIO ROUTING HELPER ---
+  // --- AUDIO HELPER ---
   const setAudioMode = async (earpieceOn) => {
       setIsEarpieceMode(earpieceOn);
       try {
@@ -631,55 +720,92 @@ export default function ResultScreen({ route, navigation }) {
           ))}
         </View>
 
-        {/* TRANSCRIPT WITH EDITABLE SPEAKER */}
+        {/* TRANSCRIPT WITH EDIT & RETRY (UPDATED) */}
         <View style={styles.card}>
-            <View style={styles.cardHeader}>
-                <Ionicons name="chatbubbles-outline" size={24} color="#50E3C2" />
-                <Text style={styles.cardTitle}>{t('label_transcript')}</Text>
+            <View style={[styles.cardHeader, { justifyContent: 'space-between' }]}>
+                <View style={{flexDirection:'row', alignItems:'center'}}>
+                    <Ionicons name="chatbubbles-outline" size={24} color="#50E3C2" />
+                    <Text style={styles.cardTitle}>{t('label_transcript')}</Text>
+                </View>
+
+                {/* EDIT BUTTONS */}
+                {!isEditing ? (
+                    <TouchableOpacity onPress={startEditing} style={styles.smallEditBtn}>
+                        <MaterialIcons name="edit" size={16} color="#50E3C2" />
+                        <Text style={[styles.smallBtnText, {color: '#50E3C2'}]}>{t('btn_edit_transcript')}</Text>
+                    </TouchableOpacity>
+                ) : (
+                    <View style={{flexDirection: 'row', gap: 10}}>
+                        <TouchableOpacity onPress={cancelEditing} style={styles.smallCancelBtn}>
+                            <Text style={styles.smallBtnText}>{t('btn_cancel_edit')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={saveAndCheckReprocess} style={styles.smallSaveBtn}>
+                            <Text style={[styles.smallBtnText, {color: '#FFF'}]}>{t('save')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
 
-            {processedSegments.length > 0 ? (
-                processedSegments.map((seg, index) => {
-                    const currentSec = position / 1000;
-                    const isActive = currentSec >= seg.start && currentSec <= seg.end;
-                    const hasFlag = flags.some(flagTime => flagTime >= seg.start && flagTime <= seg.end);
-                    
-                    return (
-                        <TouchableOpacity 
-                            key={index} 
-                            style={[styles.segmentBox, isActive && styles.activeSegment]}
-                            onPress={() => handleSegmentPress(seg.start)}
-                            activeOpacity={0.7}
-                        >
-                            {hasFlag && (
-                                <View style={styles.flagBadge}>
-                                    <Ionicons name="flag" size={14} color="#F5A623" />
-                                </View>
-                            )}
-
-                            <View style={{flexDirection:'row', justifyContent:'space-between', marginBottom: 5}}>
-                                {/* SPEAKER NAME - CLICKABLE */}
-                                <TouchableOpacity onPress={() => handleSpeakerPress(seg.speaker)} style={{flexDirection:'row', alignItems:'center'}}>
-                                    <Text style={[styles.speakerName, isActive && { color: '#000' }]}>
-                                        {seg.speaker || t('speaker_default')}:
-                                    </Text>
-                                    <MaterialIcons name="edit" size={12} color="#666" style={{marginLeft: 5, opacity: 0.7}} />
-                                </TouchableOpacity>
-
-                                <Text style={[styles.timeStamp, isActive && { color: '#333' }]}>
-                                    {formatTime(seg.start * 1000)}
-                                </Text>
-                            </View>
-                            
-                            {highlightText(
-                                seg.text, 
-                                [styles.segmentText, isActive && { color: '#000', fontWeight: '600' }]
-                            )}
-                        </TouchableOpacity>
-                    );
-                })
+            {/* CONTENT: EDITABLE or READ-ONLY */}
+            {isEditing ? (
+                /* --- EDIT MODE --- */
+                editableSegments.map((seg, index) => (
+                    <View key={index} style={styles.editSegmentBox}>
+                         <Text style={styles.editSpeakerLabel}>
+                            {seg.speaker || t('speaker_default')} ({formatTime(seg.start * 1000)})
+                         </Text>
+                         <TextInput
+                            style={styles.editInput}
+                            multiline
+                            value={seg.text}
+                            onChangeText={(text) => handleTextChange(text, index)}
+                         />
+                    </View>
+                ))
             ) : (
-                <Text style={styles.transcriptText}>{analysisData.clean_transcript || t('no_text_available')}</Text>
+                /* --- VIEW MODE (EXISTING LOGIC) --- */
+                processedSegments.length > 0 ? (
+                    processedSegments.map((seg, index) => {
+                        const currentSec = position / 1000;
+                        const isActive = currentSec >= seg.start && currentSec <= seg.end;
+                        const hasFlag = flags.some(flagTime => flagTime >= seg.start && flagTime <= seg.end);
+                        
+                        return (
+                            <TouchableOpacity 
+                                key={index} 
+                                style={[styles.segmentBox, isActive && styles.activeSegment]}
+                                onPress={() => handleSegmentPress(seg.start)}
+                                activeOpacity={0.7}
+                            >
+                                {hasFlag && (
+                                    <View style={styles.flagBadge}>
+                                        <Ionicons name="flag" size={14} color="#F5A623" />
+                                    </View>
+                                )}
+
+                                <View style={{flexDirection:'row', justifyContent:'space-between', marginBottom: 5}}>
+                                    <TouchableOpacity onPress={() => handleSpeakerPress(seg.speaker)} style={{flexDirection:'row', alignItems:'center'}}>
+                                        <Text style={[styles.speakerName, isActive && { color: '#000' }]}>
+                                            {seg.speaker || t('speaker_default')}:
+                                        </Text>
+                                        <MaterialIcons name="edit" size={12} color="#666" style={{marginLeft: 5, opacity: 0.7}} />
+                                    </TouchableOpacity>
+
+                                    <Text style={[styles.timeStamp, isActive && { color: '#333' }]}>
+                                        {formatTime(seg.start * 1000)}
+                                    </Text>
+                                </View>
+                                
+                                {highlightText(
+                                    seg.text, 
+                                    [styles.segmentText, isActive && { color: '#000', fontWeight: '600' }]
+                                )}
+                            </TouchableOpacity>
+                        );
+                    })
+                ) : (
+                    <Text style={styles.transcriptText}>{analysisData.clean_transcript || t('no_text_available')}</Text>
+                )
             )}
         </View>
 
@@ -827,6 +953,16 @@ export default function ResultScreen({ route, navigation }) {
           </Modal>
       )}
 
+      {/* RE-PROCESSING LOADING OVERLAY */}
+      {isReprocessing && (
+          <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#50E3C2" />
+              <Text style={{color: '#FFF', marginTop: 15, fontWeight: 'bold', fontSize: 16}}>
+                  {t('reprocessing_title')}
+              </Text>
+          </View>
+      )}
+
     </SafeAreaView>
   );
 }
@@ -941,4 +1077,14 @@ const styles = StyleSheet.create({
   themeBtnActive: { backgroundColor: '#FFF' },
   themeText: { marginLeft: 5, fontSize: 12, fontWeight: '600', color: '#888' },
   cancelButtonFull: { backgroundColor: '#444', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
+
+  // EDIT MODE STYLES (NEW)
+  smallEditBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(80, 227, 194, 0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, borderWidth: 1, borderColor: '#50E3C2' },
+  smallSaveBtn: { backgroundColor: '#50E3C2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15 },
+  smallCancelBtn: { backgroundColor: '#333', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15, marginRight: 5 },
+  smallBtnText: { fontSize: 12, fontWeight: '600', color: '#FFF', marginLeft: 4 },
+  
+  editSegmentBox: { marginBottom: 15, padding: 10, borderRadius: 10, backgroundColor: '#222', borderWidth: 1, borderColor: '#444' },
+  editSpeakerLabel: { color: '#4A90E2', fontSize: 12, marginBottom: 5, fontWeight: 'bold' },
+  editInput: { color: '#FFF', fontSize: 15, lineHeight: 22, backgroundColor: '#333', borderRadius: 8, padding: 10, minHeight: 60, textAlignVertical: 'top' },
 });
