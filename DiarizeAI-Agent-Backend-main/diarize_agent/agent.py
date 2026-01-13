@@ -1,8 +1,9 @@
-# agent.py
+# src/diarize_agent/agent.py
 
 import os
 import json
 import re
+import time  # Bekleme modülü
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -16,7 +17,7 @@ from pydantic import BaseModel, Field, ValidationError
 class SegmentItem(BaseModel):
     start: float = Field(..., description="Start time in seconds")
     end: float = Field(..., description="End time in seconds")
-    speaker: str = Field(..., description="Real Name (e.g. Efe) or Speaker Label (e.g. Speaker 1)")
+    speaker: str = Field(..., description="Real Name (e.g. Efe) if detected, otherwise Speaker Label")
     text: str = Field(..., description="Corrected/Translated text content")
 
 class StructuredSummary(BaseModel):
@@ -127,7 +128,7 @@ def _build_prompt(
     task = f"""
 You are an expert AI Audio Analyst.
 
-INPUT DATA (Segments with timestamps and potential Speaker Labels):
+INPUT DATA (Segments with timestamps and generic Speaker Labels):
 {segments_json}
 
 --- YOUR CORE TASKS ---
@@ -135,15 +136,19 @@ INPUT DATA (Segments with timestamps and potential Speaker Labels):
 2. {transcript_instruction}
 3. {focus_instruction}
 
-4. **INTELLIGENT SPEAKER NAMING & FORMATTING (CRITICAL)**:
-   - **DETECT NAMES**: Identify REAL NAMES (e.g. "Erdem") from context. Replace "SPEAKER_XX" labels.
-   - **CLEAN TRANSCRIPT FORMAT**: In the 'metadata.clean_transcript' field, **MERGE consecutive segments** from the same speaker into a single paragraph.
-     - **WRONG**:
-       Efe: Hello.
-       Efe: How are you?
-     - **RIGHT**:
-       Efe: Hello. How are you?
-     - **RULE**: Only start a new line with "Name:" when the speaker CHANGES.
+4. **AGGRESSIVE SPEAKER RENAMING (MANDATORY)**:
+   - **GOAL**: Replace generic labels (e.g., "SPEAKER_01") with REAL NAMES (e.g., "Ali", "Ayşe") derived from context.
+   - **RULE 1**: If a speaker says "My name is Ali" or "I am Ali", you MUST change "SPEAKER_XX" to "Ali" for **ALL** segments belonging to that speaker ID.
+   - **RULE 2**: Be aggressive. If the context implies a name (e.g., someone says "Hey Ali" and the other person responds), rename the responder.
+   - **RULE 3**: If you rename a speaker, use the Real Name in the `segments` list and `clean_transcript`.
+
+   **EXAMPLE OF DESIRED BEHAVIOR**:
+   Input Segment: {{ "speaker": "SPEAKER_00", "text": "Merhaba, benim adım Efe." }}
+   Output Segment: {{ "speaker": "Efe", "text": "Merhaba, benim adım Efe." }}
+
+5. **CLEAN TRANSCRIPT FORMAT**:
+   - In 'metadata.clean_transcript', merge consecutive segments from the same speaker.
+   - Use the REAL NAME if detected.
 
 --- REQUIRED JSON OUTPUT FORMAT ---
 {{
@@ -151,16 +156,15 @@ INPUT DATA (Segments with timestamps and potential Speaker Labels):
   "summary": "Summary string...",
   "keypoints": ["Point 1", "Point 2"],
   "segments": [
-    {{ "start": 0.0, "end": 2.5, "speaker": "Erdem", "text": "Text..." }},
-    {{ "start": 2.5, "end": 5.0, "speaker": "Erdem", "text": "Text..." }} 
+    {{ "start": 0.0, "end": 2.5, "speaker": "DETECTED_NAME_OR_LABEL", "text": "Text..." }}
   ],
   "metadata": {{
     "language": "Detected language code",
-    "clean_transcript": "Merged transcript text with Speaker Names only at the start of turns."
+    "clean_transcript": "Merged transcript text..."
   }}
 }}
 
-Take a deep breath. Merge same-speaker segments in the clean transcript.
+Take a deep breath. Use context to rename speakers aggressively in the 'segments' array.
 """.strip()
 
     return task
@@ -175,7 +179,7 @@ def analyze_audio_segments_with_gemini(
     transcript_lang: str = "original",
     keywords: str = None,
     focus_exclusive: bool = False,
-    model_name: str = "gemini-2.5-flash", 
+    model_name: str = "gemini-2.5-flash", # <--- GERİ ALINDI: Çalışan model (2.0)
     temperature: float = 0.1,
     max_retries: int = 2,
     timeout_sec: int = 240,
@@ -197,9 +201,10 @@ def analyze_audio_segments_with_gemini(
         focus_exclusive=focus_exclusive
     )
 
-    print(f"\n🚀 PROMPT SENT TO AI (Context-Aware Naming & Merging Active):")
+    print(f"\n🚀 PROMPT SENT TO AI (Aggressive Renaming Active):")
     print(f"   Target Summary Lang: {summary_lang}")
     print(f"   Target Transcript Lang: {transcript_lang}")
+    print(f"   Using Model: {model_name}")
 
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -214,6 +219,15 @@ def analyze_audio_segments_with_gemini(
     for attempt in range(max_retries + 1):
         try:
             resp = requests.post(url, headers=headers, json=payload, timeout=timeout_sec)
+            
+            # --- 429 HATASI YÖNETİMİ (GÜNCELLENDİ: 60 SANİYE) ---
+            if resp.status_code == 429:
+                print(f"⚠️ Hız Sınırı (429) - {attempt+1}. deneme başarısız. 60 saniye bekleniyor...")
+                time.sleep(60) # <--- Google'ın istediği süre kadar bekle (1 dk)
+                if attempt == max_retries:
+                     raise RuntimeError(f"HTTP 429: Rate Limit Exceeded after waiting")
+                continue # Döngüye devam et, tekrar dene
+
             if resp.status_code != 200:
                 print(f"Gemini API Error: {resp.text}")
                 raise RuntimeError(f"HTTP {resp.status_code}: {resp.text}")
@@ -236,15 +250,24 @@ def analyze_audio_segments_with_gemini(
         except Exception as e:
             last_error = e
             print(f"Attempt {attempt+1} failed: {str(e)}")
-            if attempt < max_retries:
+            
+            # 429 hatası değilse (örn json hatasıysa) promptu düzeltip hemen dene
+            if "429" not in str(e) and attempt < max_retries: 
                 payload["contents"][0]["parts"][0]["text"] = (
                     prompt + 
                     "\n\nERROR: Invalid JSON. Return ONLY valid JSON."
                 )
                 continue
+            
+            # 429 hatasıysa ve yukarıdaki if'e girmediyse (yani request kütüphanesinden exception fırlattıysa)
+            if "429" in str(e) and attempt < max_retries:
+                 print(f"⚠️ 429 Exception detected. Waiting 60s...")
+                 time.sleep(60)
+                 continue
+
             break
 
-    raise RuntimeError(f"Analysis failed: {last_error}")
+    raise RuntimeError(f"Analysis failed after retries: {last_error}")
 
 if __name__ == "__main__":
     print("--- Running Smart Naming & Merging Test ---")
