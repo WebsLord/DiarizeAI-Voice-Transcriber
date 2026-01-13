@@ -134,5 +134,15 @@
   "alert_info": "Info",
   "feature_coming_soon": "Funcionalidade em breve!",
   "error_export_failed": "A exportação falhou.",
-  "export_pdf_title": "Partilhar Análise (PDF)"
+  "export_pdf_title": "Partilhar Análise (PDF)",
+
+  "btn_edit_transcript": "Edytuj tekst",
+  "btn_save_changes": "Zapisz zmiany",
+  "btn_cancel_edit": "Anuluj",
+  "alert_reprocess_title": "Przetworzyć ponownie?",
+  "alert_reprocess_msg": "Wprowadzono zmiany w tekście. Czy chcesz, aby sztuczna inteligencja wygenerowała ponownie analizę (podsumowanie i kluczowe punkty) na podstawie tego nowego tekstu?",
+  "btn_reprocess": "Tak, przetwórz ponownie",
+  "btn_just_save": "Nie, tylko zapisz",
+  "alert_reprocess_success": "Analiza zaktualizowana!",
+  "reprocessing_title": "Ponowne przetwarzanie..."
 }

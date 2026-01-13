@@ -134,5 +134,15 @@
   "alert_info": "信息",
   "feature_coming_soon": "即将推出！",
   "error_export_failed": "导出失败。",
-  "export_pdf_title": "分享分析 (PDF)"
+  "export_pdf_title": "分享分析 (PDF)",
+
+  "btn_edit_transcript": "编辑文本",
+  "btn_save_changes": "保存更改",
+  "btn_cancel_edit": "取消",
+  "alert_reprocess_title": "重新处理？",
+  "alert_reprocess_msg": "您已更改了文本。您希望 AI 根据此新文本重新生成分析（摘要和关键点）吗？",
+  "btn_reprocess": "是，重新处理",
+  "btn_just_save": "不，仅保存",
+  "alert_reprocess_success": "分析已更新！",
+  "reprocessing_title": "正在重新处理..."
 }

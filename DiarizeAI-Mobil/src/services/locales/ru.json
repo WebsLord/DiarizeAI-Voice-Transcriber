@@ -134,5 +134,15 @@
   "alert_info": "Инфо",
   "feature_coming_soon": "Скоро будет доступно!",
   "error_export_failed": "Ошибка экспорта.",
-  "export_pdf_title": "Поделиться анализом (PDF)"
+  "export_pdf_title": "Поделиться анализом (PDF)",
+
+  "btn_edit_transcript": "Редактировать текст",
+  "btn_save_changes": "Сохранить изменения",
+  "btn_cancel_edit": "Отмена",
+  "alert_reprocess_title": "Переработать?",
+  "alert_reprocess_msg": "Вы внесли изменения в текст. Хотите, чтобы ИИ заново создал анализ (сводку и ключевые моменты) на основе этого нового текста?",
+  "btn_reprocess": "Да, переработать",
+  "btn_just_save": "Нет, просто сохранить",
+  "alert_reprocess_success": "Анализ обновлен!",
+  "reprocessing_title": "Повторная обработка..."
 }

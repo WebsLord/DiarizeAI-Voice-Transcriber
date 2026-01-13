@@ -137,9 +137,17 @@
   "feature_coming_soon": "Bu özellik çok yakında!",
 
   "error_export_failed": "Dışa aktarma başarısız oldu.",
-  "export_pdf_title": "Analizi Paylaş (PDF)"
+  "export_pdf_title": "Analizi Paylaş (PDF)",
   
-
+  "btn_edit_transcript": "Metni Düzenle",
+  "btn_save_changes": "Değişiklikleri Kaydet",
+  "btn_cancel_edit": "Vazgeç",
+  "alert_reprocess_title": "Yeniden İşle?",
+  "alert_reprocess_msg": "Metinde değişiklik yaptınız. Yapay zekanın bu yeni metne göre analizi (Özet ve Anahtar Noktalar) tekrar oluşturmasını ister misiniz?",
+  "btn_reprocess": "Evet, Yeniden İşle",
+  "btn_just_save": "Hayır, Sadece Kaydet",
+  "alert_reprocess_success": "Analiz güncellendi!",
+  "reprocessing_title": "Yeniden İşleniyor..."
 
  
 }

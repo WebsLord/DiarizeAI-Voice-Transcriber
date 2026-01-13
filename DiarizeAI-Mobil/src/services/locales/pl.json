@@ -135,6 +135,16 @@
   "alert_info": "Info",
   "feature_coming_soon": "Funkcja wkrótce dostępna!",
   "error_export_failed": "Eksport nie powiódł się.",
-  "export_pdf_title": "Udostępnij analizę (PDF)"
+  "export_pdf_title": "Udostępnij analizę (PDF)",
+
+  "btn_edit_transcript": "Editar Transcrição",
+  "btn_save_changes": "Salvar Alterações",
+  "btn_cancel_edit": "Cancelar",
+  "alert_reprocess_title": "Reprocessar?",
+  "alert_reprocess_msg": "Você fez alterações no texto. Deseja que a IA gere novamente a análise (Resumo e Pontos Chave) com base neste novo texto?",
+  "btn_reprocess": "Sim, Reprocessar",
+  "btn_just_save": "Não, Apenas Salvar",
+  "alert_reprocess_success": "Análise atualizada!",
+  "reprocessing_title": "Reprocessando..."
 
 }

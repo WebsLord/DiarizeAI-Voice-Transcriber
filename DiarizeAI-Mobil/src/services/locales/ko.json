@@ -134,5 +134,15 @@
   "alert_info": "정보",
   "feature_coming_soon": "곧 제공될 기능입니다!",
   "error_export_failed": "내보내기 실패.",
-  "export_pdf_title": "분석 공유 (PDF)"
+  "export_pdf_title": "분석 공유 (PDF)",
+
+  "btn_edit_transcript": "스크립트 편집",
+  "btn_save_changes": "변경 사항 저장",
+  "btn_cancel_edit": "취소",
+  "alert_reprocess_title": "재처리하시겠습니까?",
+  "alert_reprocess_msg": "텍스트를 변경했습니다. AI가 이 새로운 텍스트를 기반으로 분석(요약 및 핵심 사항)을 다시 생성하도록 하시겠습니까?",
+  "btn_reprocess": "예, 재처리합니다",
+  "btn_just_save": "아니요, 저장만 합니다",
+  "alert_reprocess_success": "분석이 업데이트되었습니다!",
+  "reprocessing_title": "재처리 중..."
 }
