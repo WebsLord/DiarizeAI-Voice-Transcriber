@@ -134,5 +134,15 @@
   "alert_info": "اطلاعات",
   "feature_coming_soon": "این ویژگی به زودی می‌آید!",
   "error_export_failed": "خروجی گرفتن ناموفق بود.",
-  "export_pdf_title": "اشتراک‌گذاری تحلیل (PDF)"
+  "export_pdf_title": "اشتراک‌گذاری تحلیل (PDF)",
+
+  "btn_edit_transcript": "ویرایش متن",
+  "btn_save_changes": "ذخیره تغییرات",
+  "btn_cancel_edit": "لغو",
+  "alert_reprocess_title": "پردازش مجدد؟",
+  "alert_reprocess_msg": "شما تغییراتی در متن ایجاد کردید. آیا می‌خواهید هوش مصنوعی تحلیل (خلاصه و نکات کلیدی) را بر اساس این متن جدید بازسازی کند؟",
+  "btn_reprocess": "بله، پردازش مجدد",
+  "btn_just_save": "خیر، فقط ذخیره کن",
+  "alert_reprocess_success": "تحلیل بروز شد!",
+  "reprocessing_title": "در حال پردازش مجدد..."
 }

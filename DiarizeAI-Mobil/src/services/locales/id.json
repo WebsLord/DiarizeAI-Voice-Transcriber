@@ -134,5 +134,15 @@
   "alert_info": "Info",
   "feature_coming_soon": "Fitur segera hadir!",
   "error_export_failed": "Ekspor gagal.",
-  "export_pdf_title": "Bagikan Analisis (PDF)"
+  "export_pdf_title": "Bagikan Analisis (PDF)",
+
+  "btn_edit_transcript": "Edit Transkrip",
+  "btn_save_changes": "Simpan Perubahan",
+  "btn_cancel_edit": "Batal",
+  "alert_reprocess_title": "Proses Ulang?",
+  "alert_reprocess_msg": "Anda telah mengubah teks. Apakah Anda ingin AI membuat ulang analisis (Ringkasan dan Poin Utama) berdasarkan teks baru ini?",
+  "btn_reprocess": "Ya, Proses Ulang",
+  "btn_just_save": "Tidak, Simpan Saja",
+  "alert_reprocess_success": "Analisis diperbarui!",
+  "reprocessing_title": "Sedang memproses ulang..."
 }

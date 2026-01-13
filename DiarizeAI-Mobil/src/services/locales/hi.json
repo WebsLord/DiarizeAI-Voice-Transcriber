@@ -135,5 +135,15 @@
   "alert_info": "जानकारी",
   "feature_coming_soon": "यह सुविधा जल्द ही आ रही है!",
   "error_export_failed": "निर्यात विफल रहा।",
-  "export_pdf_title": "विश्लेषण साझा करें (PDF)"
+  "export_pdf_title": "विश्लेषण साझा करें (PDF)",
+
+  "btn_edit_transcript": "ट्रांसक्रिप्ट संपादित करें",
+  "btn_save_changes": "परिवर्तन सहेजें",
+  "btn_cancel_edit": "रद्द करें",
+  "alert_reprocess_title": "पुनः प्रोसेस करें?",
+  "alert_reprocess_msg": "आपने टेक्स्ट में बदलाव किए हैं। क्या आप चाहते हैं कि AI इस नए टेक्स्ट के आधार पर विश्लेषण (सारांश और मुख्य बिंदु) को फिर से बनाए?",
+  "btn_reprocess": "हाँ, पुनः प्रोसेस करें",
+  "btn_just_save": "नहीं, केवल सहेजें",
+  "alert_reprocess_success": "विश्लेषण अपडेट किया गया!",
+  "reprocessing_title": "पुनः प्रोसेस हो रहा है..."
 }

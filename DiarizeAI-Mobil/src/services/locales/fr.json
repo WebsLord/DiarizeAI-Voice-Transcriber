@@ -134,5 +134,15 @@
   "alert_info": "Info",
   "feature_coming_soon": "Fonctionnalité à venir !",
   "error_export_failed": "L'exportation a échoué.",
-  "export_pdf_title": "Partager l'analyse (PDF)"
+  "export_pdf_title": "Partager l'analyse (PDF)",
+
+  "btn_edit_transcript": "Modifier la transcription",
+  "btn_save_changes": "Enregistrer les modifications",
+  "btn_cancel_edit": "Annuler",
+  "alert_reprocess_title": "Retraiter ?",
+  "alert_reprocess_msg": "Vous avez modifié le texte. Souhaitez-vous que l'IA régénère l'analyse (résumé et points clés) sur la base de ce nouveau texte ?",
+  "btn_reprocess": "Oui, retraiter",
+  "btn_just_save": "Non, enregistrer seulement",
+  "alert_reprocess_success": "Analyse mise à jour !",
+  "reprocessing_title": "Retraitement en cours..."
 }

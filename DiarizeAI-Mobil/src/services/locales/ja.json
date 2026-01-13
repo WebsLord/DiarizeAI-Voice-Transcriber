@@ -134,5 +134,15 @@
   "alert_info": "情報",
   "feature_coming_soon": "近日公開予定！",
   "error_export_failed": "エクスポートに失敗しました。",
-  "export_pdf_title": "分析を共有 (PDF)"
+  "export_pdf_title": "分析を共有 (PDF)",
+
+  "btn_edit_transcript": "テキストを編集",
+  "btn_save_changes": "変更を保存",
+  "btn_cancel_edit": "キャンセル",
+  "alert_reprocess_title": "再処理しますか？",
+  "alert_reprocess_msg": "テキストに変更を加えました。この新しいテキストに基づいて、AIに分析（要約とキーポイント）を再生成させますか？",
+  "btn_reprocess": "はい、再処理する",
+  "btn_just_save": "いいえ、保存のみ",
+  "alert_reprocess_success": "分析が更新されました！",
+  "reprocessing_title": "再処理中..."
 }
