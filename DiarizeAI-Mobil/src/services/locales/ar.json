@@ -134,6 +134,16 @@
   "alert_info": "معلومات",
   "feature_coming_soon": "الميزة قادمة قريباً!",
   "error_export_failed": "فشل التصدير.",
-  "export_pdf_title": "مشاركة التحليل (PDF)"
+  "export_pdf_title": "مشاركة التحليل (PDF)",
+
+  "btn_edit_transcript": "تعديل النص",
+  "btn_save_changes": "حفظ التغييرات",
+  "btn_cancel_edit": "إلغاء",
+  "alert_reprocess_title": "إعادة المعالجة؟",
+  "alert_reprocess_msg": "لقد قمت بإجراء تغييرات على النص. هل تريد أن يقوم الذكاء الاصطناعي بإعادة إنشاء التحليل (الملخص والنقاط الرئيسية) بناءً على هذا النص الجديد؟",
+  "btn_reprocess": "نعم، أعد المعالجة",
+  "btn_just_save": "لا، احفظ فقط",
+  "alert_reprocess_success": "تم تحديث التحليل!",
+  "reprocessing_title": "جارٍ إعادة المعالجة..."
 
 }

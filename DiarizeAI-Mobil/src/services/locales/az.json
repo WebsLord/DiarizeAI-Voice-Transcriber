@@ -134,5 +134,15 @@
   "alert_info": "Məlumat",
   "feature_coming_soon": "Bu xüsusiyyət tezliklə gələcək!",
   "error_export_failed": "İxrac uğursuz oldu.",
-  "export_pdf_title": "Analizi Paylaş (PDF)"
+  "export_pdf_title": "Analizi Paylaş (PDF)", 
+
+  "btn_edit_transcript": "Mətni Düzəlt",
+  "btn_save_changes": "Dəyişiklikləri Yadda Saxla",
+  "btn_cancel_edit": "Ləğv et",
+  "alert_reprocess_title": "Yenidən Emal?",
+  "alert_reprocess_msg": "Mətndə dəyişiklik etdiniz. Süni intellektin bu yeni mətnə əsasən analizi (Xülasə və Əsas Məqamlar) yenidən yaratmasını istəyirsinizmi?",
+  "btn_reprocess": "Bəli, Yenidən İşlə",
+  "btn_just_save": "Xeyr, Sadəcə Yadda Saxla",
+  "alert_reprocess_success": "Analiz yeniləndi!",
+  "reprocessing_title": "Yenidən İşlənir..."
 }

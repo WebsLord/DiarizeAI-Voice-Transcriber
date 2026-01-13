@@ -135,7 +135,17 @@
   "alert_info": "Info",
   "feature_coming_soon": "¡Próximamente!",
   "error_export_failed": "La exportación falló.",
-  "export_pdf_title": "Compartir Análisis (PDF)"
+  "export_pdf_title": "Compartir Análisis (PDF)",
+
+  "btn_edit_transcript": "Editar transcripción",
+  "btn_save_changes": "Guardar cambios",
+  "btn_cancel_edit": "Cancelar",
+  "alert_reprocess_title": "¿Re-procesar?",
+  "alert_reprocess_msg": "Has realizado cambios en el texto. ¿Te gustaría que la IA regenere el análisis (Resumen y Puntos Clave) basado en este nuevo texto?",
+  "btn_reprocess": "Sí, re-procesar",
+  "btn_just_save": "No, solo guardar",
+  "alert_reprocess_success": "¡Análisis actualizado!",
+  "reprocessing_title": "Re-procesando..."
 
   
 

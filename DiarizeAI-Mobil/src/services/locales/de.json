@@ -135,7 +135,17 @@
   "alert_info": "Info",
   "feature_coming_soon": "Funktion kommt bald!",
   "error_export_failed": "Export fehlgeschlagen.",
-  "export_pdf_title": "Analyse teilen (PDF)"
+  "export_pdf_title": "Analyse teilen (PDF)",
+
+  "btn_edit_transcript": "Transkript bearbeiten",
+  "btn_save_changes": "Änderungen speichern",
+  "btn_cancel_edit": "Abbrechen",
+  "alert_reprocess_title": "Neu verarbeiten?",
+  "alert_reprocess_msg": "Sie haben den Text geändert. Möchten Sie, dass die KI die Analyse (Zusammenfassung und Kernpunkte) basierend auf diesem neuen Text neu erstellt?",
+  "btn_reprocess": "Ja, neu verarbeiten",
+  "btn_just_save": "Nein, nur speichern",
+  "alert_reprocess_success": "Analyse aktualisiert!",
+  "reprocessing_title": "Wird neu verarbeitet..."
 
   
 }
