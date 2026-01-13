@@ -8,9 +8,9 @@ from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 from config import Config
 from models import db, Job, User
-from pipeline import run_whisper_and_agent
+# IMPORT UPDATED: Added run_agent_on_text
+from pipeline import run_whisper_and_agent, run_agent_on_text
 
-# Function to check allowed file extensions
 def allowed_file(filename: str, allowed: set[str]) -> bool:
     if "." not in filename:
         return False
@@ -20,7 +20,6 @@ def allowed_file(filename: str, allowed: set[str]) -> bool:
     else:
         return False
 
-# Function to create the Flask app instance
 def create_app():
     app = Flask(__name__) 
     app.config.from_object(Config) 
@@ -31,12 +30,10 @@ def create_app():
     db.init_app(app) 
     
     with app.app_context():
-        # WARNING: If table conflict occurs, delete the old .db file.
-        # UYARI: Tablo çakışması olursa eski .db dosyasını silin.
         db.create_all() 
     
     # ---------------------------------------------------------
-    # AUTH ROUTES (Login & Register)
+    # AUTH ROUTES
     # ---------------------------------------------------------
 
     @app.route("/auth/register", methods=["POST"])
@@ -103,7 +100,7 @@ def create_app():
             return jsonify({"error": "Invalid email or password."}), 401
 
     # ---------------------------------------------------------
-    # JOB ROUTES (Upload & Process)
+    # JOB ROUTES
     # ---------------------------------------------------------
     
     @app.post("/api/jobs")
@@ -155,8 +152,6 @@ def create_app():
         if str(val_exclusive).lower() == "true": job.focus_exclusive = True
         elif str(val_exclusive).lower() == "false": job.focus_exclusive = False
 
-        # --- SAVE INPUT FLAGS ---
-        # --- GİRİŞ BAYRAKLARINI KAYDET ---
         val_flags = data.get("input_flags")
         if val_flags: 
             job.flags = val_flags
@@ -166,15 +161,14 @@ def create_app():
             job.error_message = None
             db.session.commit()
             
-            # RUN PIPELINE (Now passing flags)
-            # PIPELINE'I ÇALIŞTIR (Artık bayraklar gönderiliyor)
+            # RUN FULL PIPELINE (Whisper + Agent)
             out = run_whisper_and_agent(
                 audio_path=job.audio_path,
                 summary_lang=job.summary_lang,
                 transcript_lang=job.transcript_lang,
                 keywords=job.input_keywords,
                 focus_exclusive=job.focus_exclusive,
-                flags=job.flags # Pass flags to pipeline / Bayrakları pipeline'a ilet
+                flags=job.flags 
             )
             
             job.conversation_type = out.get("conversation_type", "unknown")
@@ -208,6 +202,62 @@ def create_app():
             job.run_count += 1
             db.session.commit()
             return jsonify(job.to_dict()), 500
+
+    # --- NEW ENDPOINT: RE-ANALYZE (Text Only) ---
+    @app.post("/api/jobs/<int:job_id>/reanalyze")
+    def reanalyze_job(job_id: int):
+        job = Job.query.get_or_404(job_id)
+        
+        # Get updated segments from frontend
+        data = request.get_json(silent=True) or {}
+        updated_segments = data.get("segments")
+
+        if not updated_segments:
+            return jsonify({"error": "No segments provided for re-analysis."}), 400
+
+        try:
+            print(f"♻️ RE-ANALYZING Job {job_id} with {len(updated_segments)} segments...")
+            job.status = "processing"
+            db.session.commit()
+
+            # RUN AGENT ONLY (No Whisper)
+            out = run_agent_on_text(
+                segments=updated_segments,
+                summary_lang=job.summary_lang,
+                transcript_lang=job.transcript_lang,
+                keywords=job.input_keywords,
+                focus_exclusive=job.focus_exclusive,
+                flags=job.flags
+            )
+
+            # Update Fields with New Analysis
+            # Yeni analizle alanları güncelle (Özet, Anahtar Noktalar)
+            job.summary = out.get("summary", job.summary)
+            job.keypoints_json = json.dumps(out.get("keypoints", []), ensure_ascii=False)
+            
+            # If agent returned processed segments (e.g. translated), update them.
+            # Else, trust the user edited segments.
+            # Ajan işlenmiş segmentler (örn. çeviri) döndürdüyse güncelle, yoksa kullanıcının düzenlediğine güven.
+            gemini_segments = out.get("segments")
+            if gemini_segments and len(gemini_segments) > 0:
+                job.segments = gemini_segments
+            else:
+                job.segments = updated_segments
+
+            job.status = "done"
+            db.session.commit()
+
+            response_payload = job.to_dict()
+            response_payload['segments'] = job.segments
+            
+            return jsonify(response_payload)
+
+        except Exception as e:
+            print(f"❌ ERROR DURING RE-ANALYSIS: {str(e)}")
+            job.status = "error"
+            job.error_message = str(e)
+            db.session.commit()
+            return jsonify({"error": str(e)}), 500
         
     @app.post("/api/jobs/<int:job_id>/rerun")
     def rerun_job(job_id: int):
@@ -264,6 +314,19 @@ def create_app():
 
     return app
 
+
 if __name__ == '__main__':
     app = create_app()
+    
+    # --- DEBUG: AKTİF ROTALARI LİSTELE ---
+    print("\n" + "="*40)
+    print("🛣️  SUNUCUDA TANIMLI ROTALAR:")
+    print("="*40)
+    # Rotaları düzgünce sıralayıp yazdıralım
+    for rule in app.url_map.iter_rules():
+        methods = ','.join(rule.methods)
+        print(f"👉 {rule.rule} [{methods}]")
+    print("="*40 + "\n")
+    # -------------------------------------
+
     app.run(host='0.0.0.0', port=5001, debug=True)
