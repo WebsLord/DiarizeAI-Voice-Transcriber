@@ -320,7 +320,7 @@ if __name__ == '__main__':
     
     # --- DEBUG: AKTİF ROTALARI LİSTELE ---
     print("\n" + "="*40)
-    print("🛣️  SUNUCUDA TANIMLI ROTALAR:")
+    print("🛣️  ROUTES DEFINED ON THE SERVER:")
     print("="*40)
     # Rotaları düzgünce sıralayıp yazdıralım
     for rule in app.url_map.iter_rules():
