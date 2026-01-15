@@ -94,9 +94,13 @@ def _build_prompt(
     target_sum_lang_name = lang_map.get(summary_lang.lower(), summary_lang.upper()) if summary_lang else "ORIGINAL LANGUAGE"
     target_trans_lang_name = lang_map.get(transcript_lang.lower(), transcript_lang.upper()) if transcript_lang else "ORIGINAL LANGUAGE"
 
-    # --- DİNAMİK KURALLAR ---
     
-    # 1. Özet Dili
+
+    
+    # --- DYNAMIC RULES --- / # --- DİNAMİK KURALLAR ---
+    
+    # # 1. Summary Language / 1. Özet Dili
+    
     if summary_lang and summary_lang.lower() != "original":
         summary_instruction = (
             f"*** CRITICAL LANGUAGE RULE ***\n"
@@ -143,8 +147,8 @@ INPUT DATA (Segments with timestamps and generic Speaker Labels):
    - **RULE 3**: If you rename a speaker, use the Real Name in the `segments` list and `clean_transcript`.
 
    **EXAMPLE OF DESIRED BEHAVIOR**:
-   Input Segment: {{ "speaker": "SPEAKER_00", "text": "Merhaba, benim adım Efe." }}
-   Output Segment: {{ "speaker": "Efe", "text": "Merhaba, benim adım Efe." }}
+Input Segment: {{ "speaker": "SPEAKER_00", "text": "Hello, my name is Efe." }}
+Output Segment: {{ "speaker": "Efe", "text": "Hello, my name is Efe." }}
 
 5. **CLEAN TRANSCRIPT FORMAT**:
    - In 'metadata.clean_transcript', merge consecutive segments from the same speaker.
@@ -179,7 +183,7 @@ def analyze_audio_segments_with_gemini(
     transcript_lang: str = "original",
     keywords: str = None,
     focus_exclusive: bool = False,
-    model_name: str = "gemini-2.5-flash", # <--- GERİ ALINDI: Çalışan model (2.0)
+    model_name: str = "gemini-2.5-flash", # <--- REVERSED: Working model (2.0) # <--- GERİ ALINDI: Çalışan model (2.0)
     temperature: float = 0.1,
     max_retries: int = 2,
     timeout_sec: int = 240,
@@ -220,9 +224,10 @@ def analyze_audio_segments_with_gemini(
         try:
             resp = requests.post(url, headers=headers, json=payload, timeout=timeout_sec)
             
+            # --- 429 ERROR MANAGEMENT (UPDATED: 60 SECONDS) ---
             # --- 429 HATASI YÖNETİMİ (GÜNCELLENDİ: 60 SANİYE) ---
             if resp.status_code == 429:
-                print(f"⚠️ Hız Sınırı (429) - {attempt+1}. deneme başarısız. 60 saniye bekleniyor...")
+                print(f"⚠️ Speed ​​Limit (429) - {attempt+1}. Attempt failed. Waiting 60 seconds...")
                 time.sleep(60) # <--- Google'ın istediği süre kadar bekle (1 dk)
                 if attempt == max_retries:
                      raise RuntimeError(f"HTTP 429: Rate Limit Exceeded after waiting")
@@ -251,6 +256,7 @@ def analyze_audio_segments_with_gemini(
             last_error = e
             print(f"Attempt {attempt+1} failed: {str(e)}")
             
+            # If it's not a 429 error (e.g., a JSON error), correct the prompt and try again immediately.
             # 429 hatası değilse (örn json hatasıysa) promptu düzeltip hemen dene
             if "429" not in str(e) and attempt < max_retries: 
                 payload["contents"][0]["parts"][0]["text"] = (
@@ -259,6 +265,7 @@ def analyze_audio_segments_with_gemini(
                 )
                 continue
             
+            # If it's error 429 and it didn't enter the if statement above (i.e., it threw an exception from the request library)
             # 429 hatasıysa ve yukarıdaki if'e girmediyse (yani request kütüphanesinden exception fırlattıysa)
             if "429" in str(e) and attempt < max_retries:
                  print(f"⚠️ 429 Exception detected. Waiting 60s...")
