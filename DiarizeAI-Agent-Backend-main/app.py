@@ -8,8 +8,8 @@ from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 from config import Config
 from models import db, Job, User
-# IMPORT UPDATED: Added run_agent_on_text
 from pipeline import run_whisper_and_agent, run_agent_on_text
+from sqlalchemy import func
 
 def allowed_file(filename: str, allowed: set[str]) -> bool:
     if "." not in filename:
@@ -49,6 +49,8 @@ def create_app():
         if User.query.filter_by(email=email).first():
             return jsonify({"error": "This email address is already registered."}), 400
         
+        # Generate Unique Tag (e.g. Efe#1234)
+        # Benzersiz Etiket Oluştur (örn. Efe#1234)
         final_username = None
         for _ in range(5):
             tag = f"{random.randint(1000, 9999)}" 
@@ -100,6 +102,111 @@ def create_app():
             return jsonify({"error": "Invalid email or password."}), 401
 
     # ---------------------------------------------------------
+    # PROFILE & STATS ROUTES
+    # ---------------------------------------------------------
+    
+    @app.post("/api/profile/check-username")
+    def check_username_availability():
+        """
+        Checks if a full username (Name#Tag) is already taken.
+        Tam kullanıcı adının (İsim#Etiket) alınıp alınmadığını kontrol eder.
+        """
+        data = request.get_json()
+        full_username = data.get("username")
+        current_user_id = data.get("user_id")
+
+        if not full_username:
+            return jsonify({"available": False, "message": "Username required"}), 400
+
+        # Find user with this name
+        # Bu isme sahip kullanıcıyı bul
+        existing_user = User.query.filter_by(username=full_username).first()
+
+        # If no user found, OR the user found is the requester themselves -> Available
+        # Kullanıcı bulunamazsa VEYA bulunan kullanıcı isteyenin kendisiyse -> Uygun
+        if not existing_user:
+            return jsonify({"available": True, "message": "Username available"})
+        
+        if str(existing_user.id) == str(current_user_id):
+            return jsonify({"available": True, "message": "This is your current username"})
+
+        # Otherwise, taken
+        # Aksi halde, alınmış
+        return jsonify({"available": False, "message": "Username already taken"})
+
+    @app.get("/api/profile/stats")
+    def get_profile_stats():
+        try:
+            user_id = request.args.get('user_id')
+            
+            if not user_id:
+                total_jobs = 0
+                chart_data = []
+            else:
+                total_jobs = Job.query.filter_by(user_id=user_id).count()
+                
+                type_stats = db.session.query(
+                    Job.conversation_type, func.count(Job.id)
+                ).filter(Job.user_id == user_id).group_by(Job.conversation_type).all()
+
+                chart_data = []
+                for c_type, count in type_stats:
+                    label = c_type if c_type else "Diğer"
+                    chart_data.append({
+                        "name": label,
+                        "count": count
+                    })
+
+            return jsonify({
+                "total_recordings": total_jobs,
+                "membership": "Pro Member", 
+                "chart_data": chart_data
+            })
+        except Exception as e:
+            print(f"❌ STATS ERROR: {str(e)}")
+            return jsonify({"error": str(e)}), 500
+
+    @app.put("/api/profile/update")
+    def update_profile():
+        data = request.get_json()
+        user_id = data.get("user_id") 
+        
+        if not user_id:
+             return jsonify({"error": "User ID required"}), 400
+
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Validate Username Uniqueness (Double Check)
+        # Kullanıcı Adı Benzersizliğini Doğrula (Çifte Kontrol)
+        if "username" in data and data["username"]:
+            new_username = data["username"]
+            if new_username != user.username:
+                if User.query.filter_by(username=new_username).first():
+                    return jsonify({"error": "Username already taken"}), 409
+                user.username = new_username
+        
+        if "email" in data and data["email"]:
+            existing = User.query.filter_by(email=data["email"]).first()
+            if existing and existing.id != user.id:
+                return jsonify({"error": "Email already in use"}), 400
+            user.email = data["email"]
+
+        if "password" in data and data["password"]:
+            user.set_password(data["password"])
+
+        try:
+            db.session.commit()
+            return jsonify({
+                "message": "Profile updated successfully", 
+                "user": {"username": user.username, "email": user.email}
+            })
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 500
+
+    # ---------------------------------------------------------
     # JOB ROUTES
     # ---------------------------------------------------------
     
@@ -111,6 +218,9 @@ def create_app():
         if not f.filename:
             return jsonify({"error": "Filename is blank"}), 400
         
+        # Get user_id from form data
+        user_id = request.form.get('user_id')
+
         if not allowed_file(f.filename, app.config["ALLOWED_EXTENSIONS"]):
             return jsonify({"error": "Not allowed file type"}), 400
             
@@ -127,7 +237,8 @@ def create_app():
         save_path = os.path.join(app.config["UPLOAD_FOLDER"], new_name)
         f.save(save_path)
         
-        job = Job(audio_path=save_path, status="uploaded")
+        job = Job(audio_path=save_path, status="uploaded", user_id=user_id)
+        
         db.session.add(job)
         db.session.commit()
         return jsonify(job.to_dict()), 201
@@ -161,7 +272,6 @@ def create_app():
             job.error_message = None
             db.session.commit()
             
-            # RUN FULL PIPELINE (Whisper + Agent)
             out = run_whisper_and_agent(
                 audio_path=job.audio_path,
                 summary_lang=job.summary_lang,
@@ -203,12 +313,10 @@ def create_app():
             db.session.commit()
             return jsonify(job.to_dict()), 500
 
-    # --- NEW ENDPOINT: RE-ANALYZE (Text Only) ---
     @app.post("/api/jobs/<int:job_id>/reanalyze")
     def reanalyze_job(job_id: int):
         job = Job.query.get_or_404(job_id)
         
-        # Get updated segments from frontend
         data = request.get_json(silent=True) or {}
         updated_segments = data.get("segments")
 
@@ -220,7 +328,6 @@ def create_app():
             job.status = "processing"
             db.session.commit()
 
-            # RUN AGENT ONLY (No Whisper)
             out = run_agent_on_text(
                 segments=updated_segments,
                 summary_lang=job.summary_lang,
@@ -230,14 +337,9 @@ def create_app():
                 flags=job.flags
             )
 
-            # Update Fields with New Analysis
-            # Yeni analizle alanları güncelle (Özet, Anahtar Noktalar)
             job.summary = out.get("summary", job.summary)
             job.keypoints_json = json.dumps(out.get("keypoints", []), ensure_ascii=False)
             
-            # If agent returned processed segments (e.g. translated), update them.
-            # Else, trust the user edited segments.
-            # Ajan işlenmiş segmentler (örn. çeviri) döndürdüyse güncelle, yoksa kullanıcının düzenlediğine güven.
             gemini_segments = out.get("segments")
             if gemini_segments and len(gemini_segments) > 0:
                 job.segments = gemini_segments
@@ -314,19 +416,13 @@ def create_app():
 
     return app
 
-
 if __name__ == '__main__':
     app = create_app()
-    
-    # --- DEBUG: AKTİF ROTALARI LİSTELE ---
     print("\n" + "="*40)
     print("🛣️  ROUTES DEFINED ON THE SERVER:")
     print("="*40)
-    # Rotaları düzgünce sıralayıp yazdıralım
     for rule in app.url_map.iter_rules():
         methods = ','.join(rule.methods)
         print(f"👉 {rule.rule} [{methods}]")
     print("="*40 + "\n")
-    # -------------------------------------
-
     app.run(host='0.0.0.0', port=5001, debug=True)
