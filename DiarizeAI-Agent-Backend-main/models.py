@@ -28,6 +28,10 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     
+    # Relationship: One user has many jobs
+    # İlişki: Bir kullanıcının birden fazla işi (job) vardır
+    jobs = db.relationship('Job', backref='owner', lazy=True)
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -42,6 +46,11 @@ class Job(db.Model):
     __tablename__ = 'jobs'
 
     id = db.Column(db.Integer, primary_key=True)
+    
+    # Foreign Key: Links job to a user
+    # Dış Anahtar: İşi bir kullanıcıya bağlar
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
     audio_path = db.Column(db.Text, nullable=False)
     conversation_type = db.Column(db.Text, nullable=True)
     summary = db.Column(db.Text, nullable=True)
@@ -84,21 +93,15 @@ class Job(db.Model):
     def to_dict(self):
             return {
                 "id": self.id,
+                "user_id": self.user_id, # Added to dictionary / Sözlüğe eklendi
                 "audio_path": self.audio_path,
                 "conversation_type": self.conversation_type,
                 "summary": self.summary,
                 "keypoints": None if not self.keypoints_json else json.loads(self.keypoints_json),
                 "language": self.language,
                 "clean_transcript": self.clean_transcript,
-                
-                # Return segments directly (SQLAlchemy handles JSON)
-                # Segmentleri doğrudan döndür (SQLAlchemy JSON'u halleder)
                 "segments": self.segments,
-                
-                # Return flags
-                # Bayrakları döndür
                 "flags": self.flags or [],
-
                 "status": self.status,
                 "error_message": self.error_message,
                 "run_count": self.run_count,
