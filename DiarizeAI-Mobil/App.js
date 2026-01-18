@@ -8,8 +8,9 @@ import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen'; 
 import ResultScreen from './src/screens/ResultScreen';
-// NEW SCREEN
 import SummarizedScreen from './src/screens/SummarizedScreen';
+// NEW IMPORT
+import ProfileScreen from './src/screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -35,6 +36,9 @@ export default function App() {
         {/* Result & Summary Screens */}
         <Stack.Screen name="ResultScreen" component={ResultScreen} />
         <Stack.Screen name="Summarized" component={SummarizedScreen} />
+        
+        {/* NEW: Profile Screen */}
+        <Stack.Screen name="Profile" component={ProfileScreen} />
         
       </Stack.Navigator>
     </NavigationContainer>
